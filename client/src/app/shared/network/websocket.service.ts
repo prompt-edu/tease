@@ -1,6 +1,5 @@
 import { Injectable } from '@angular/core';
-import { CompatClient, Stomp } from '@stomp/stompjs';
-import { StompSubscription } from '@stomp/stompjs/src/stomp-subscription';
+import { CompatClient, Stomp, StompSubscription } from '@stomp/stompjs';
 import { Allocation } from 'src/app/api/models';
 import { ConstraintWrapper } from '../matching/constraints/constraint';
 import { GLOBALS } from '../utils/constants';
@@ -19,7 +18,7 @@ export class WebsocketService {
   private readonly url = location.hostname;
   private readonly secure = location.protocol === 'https:';
 
-  constructor() {}
+  constructor() { }
 
   private async connect(): Promise<boolean> {
     return new Promise((resolve, reject) => {

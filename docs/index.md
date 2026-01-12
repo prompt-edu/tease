@@ -246,6 +246,92 @@ The course iteration appears in the navigation bar, with the live collaboration 
 
 ![Live Collaboration](live-collaboration.gif)
 
+### Testing Collaborative Editing Locally
+
+For local development and testing, you can test the collaborative editing features without requiring PROMPT authentication.
+
+#### How Collaborative Editing Works
+
+The system uses **STOMP over WebSocket** to synchronize three types of data in real-time:
+
+- **Allocations** - Student assignments to projects
+- **Constraints** - Allocation rules and requirements
+- **Locked Students** - Manually locked student assignments
+
+All clients connected to the same course iteration ID will receive real-time updates when any client makes changes.
+
+#### Testing with CSV Import
+
+When using CSV import, collaborative editing requires manual setup since CSV import doesn't automatically create a course iteration ID.
+
+**Quick Manual Test Steps:**
+
+1. **Start the application**:
+
+   ```bash
+   docker compose up
+   ```
+
+2. **Open two browser windows** pointing to `http://localhost/tease` (or `http://localhost:80/`)
+
+3. **Import CSV data in the first window** (use the example CSV from the import modal)
+
+4. **Create a mock course iteration** in both browser windows using DevTools console (`F12` or `Cmd+Option+I`):
+
+   ```javascript
+   localStorage.setItem('tease-course-iteration', JSON.stringify({
+     id: 'test-course-123',
+     semesterName: 'Test Semester'
+   }));
+   location.reload();
+   ```
+
+   **Important**: Use the **same course iteration ID** (`test-course-123` in this example) in both windows.
+
+5. **Verify connection**: Look for the "Connected to Collaboration" success toast notification in both windows
+
+6. **Test real-time synchronization**:
+
+   - Drag students between projects in Window 1 → Changes appear in Window 2
+   - Add or modify constraints in Window 2 → Updates appear in Window 1
+   - Lock/unlock students in Window 1 → Lock status syncs to Window 2
+   - Run the matching algorithm in either window → Results sync to both
+
+#### Testing with PROMPT Import
+
+When using PROMPT import, collaborative editing works automatically:
+
+- The course iteration ID is set automatically from PROMPT
+- WebSocket connection is established immediately after import
+- No manual configuration is required
+
+#### Technical Notes
+
+- **In-Memory Storage**: The server stores collaboration data in memory (not a database), so data is lost on server restart
+- **Same Course Iteration Required**: All clients must use the same course iteration ID to see each other's changes
+- **No Authentication Required for Local Testing**: The WebSocket server allows `http://localhost` connections without JWT authentication
+- **Console Logging**: Open the browser console to see "Received allocations", "Received constraints", and "Received lockedStudents" messages when updates are received
+
+#### Troubleshooting
+
+If collaborative editing isn't working:
+
+1. **Check WebSocket connection**: Look for "Connected to Collaboration" toast notification
+2. **Verify course iteration ID**: Ensure all browser windows have the same course iteration ID:
+
+   ```javascript
+   localStorage.getItem('tease-course-iteration')
+   ```
+
+3. **Check browser console**: Look for WebSocket connection errors or STOMP errors
+4. **Restart server**: Stop and restart `docker compose up` to clear in-memory state
+5. **Clear browser cache**: Clear localStorage and reload:
+
+   ```javascript
+   localStorage.clear();
+   location.reload();
+   ```
+
 ## Export Data
 
 TEASE offers three ways to export data:
