@@ -55,7 +55,7 @@
     "file-saver": "2.0.5",
     "html2canvas": "1.4.1",
     "i18n-iso-countries": "^7.14.0",
-    "javascript-lp-solver": "0.4.24",
+    "javascript-lp-solver": "1.0.1",
     "jszip": "3.10.1",
     "ng2-charts": "^8.0.0",
     "ng2-dragula": "6.0.0",
