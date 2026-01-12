@@ -1,20 +1,24 @@
 name: Build and Push
 
-on:
-  pull_request:
-    branches: [main]
+permissions:
+  contents: read
+  packages: write
 
+on:
   workflow_call:
     inputs:
       image_tag:
         description: "Optional image tag override"
         required: false
         type: string
+    outputs:
+      tease_image_tag:
+        description: "The pushed image tag for the tease image"
+        value: ${{ jobs.build-and-push.outputs.image_tag }}
 
 jobs:
   build-and-push:
     strategy:
-      fail-fast: false
       matrix:
         include:
           - image-name: ls1intum/tease
@@ -24,6 +28,7 @@ jobs:
             docker-file: ./server/Dockerfile
             docker-context: ./server
     uses: ls1intum/.github/.github/workflows/build-and-push-docker-image.yml@v1.1.1
+    secrets: inherit
     with:
       image-name: ${{ matrix.image-name }}
       docker-file: ${{ matrix.docker-file }}

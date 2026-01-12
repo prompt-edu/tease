@@ -10,8 +10,8 @@ import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
 import { Project } from '../models/project';
-import { teaseCourseIterationsCourseIterationIdProjectsGet } from '../fn/projects/tease-course-iterations-course-iteration-id-projects-get';
-import { TeaseCourseIterationsCourseIterationIdProjectsGet$Params } from '../fn/projects/tease-course-iterations-course-iteration-id-projects-get';
+import { teaseCoursePhaseCourseIterationIdProjectsGet } from '../fn/projects/tease-course-phase-course-iteration-id-projects-get';
+import { TeaseCoursePhaseCourseIterationIdProjectsGet$Params } from '../fn/projects/tease-course-phase-course-iteration-id-projects-get';
 
 @Injectable({ providedIn: 'root' })
 export class ProjectsService extends BaseService {
@@ -19,8 +19,8 @@ export class ProjectsService extends BaseService {
     super(config, http);
   }
 
-  /** Path part for operation `teaseCourseIterationsCourseIterationIdProjectsGet()` */
-  static readonly TeaseCourseIterationsCourseIterationIdProjectsGetPath = '/tease/course-iterations/{courseIterationId}/projects';
+  /** Path part for operation `teaseCoursePhaseCourseIterationIdProjectsGet()` */
+  static readonly TeaseCoursePhaseCourseIterationIdProjectsGetPath = '/tease/course_phase/{courseIterationId}/projects';
 
   /**
    * Retrieve projects from a specific course iteration.
@@ -28,12 +28,12 @@ export class ProjectsService extends BaseService {
    * Returns projects from a course iteration based on the provided ID.
    *
    * This method provides access to the full `HttpResponse`, allowing access to response headers.
-   * To access only the response body, use `teaseCourseIterationsCourseIterationIdProjectsGet()` instead.
+   * To access only the response body, use `teaseCoursePhaseCourseIterationIdProjectsGet()` instead.
    *
    * This method doesn't expect any request body.
    */
-  teaseCourseIterationsCourseIterationIdProjectsGet$Response(params: TeaseCourseIterationsCourseIterationIdProjectsGet$Params, context?: HttpContext): Observable<StrictHttpResponse<Array<Project>>> {
-    return teaseCourseIterationsCourseIterationIdProjectsGet(this.http, this.rootUrl, params, context);
+  teaseCoursePhaseCourseIterationIdProjectsGet$Response(params: TeaseCoursePhaseCourseIterationIdProjectsGet$Params, context?: HttpContext): Observable<StrictHttpResponse<Array<Project>>> {
+    return teaseCoursePhaseCourseIterationIdProjectsGet(this.http, this.rootUrl, params, context);
   }
 
   /**
@@ -42,12 +42,12 @@ export class ProjectsService extends BaseService {
    * Returns projects from a course iteration based on the provided ID.
    *
    * This method provides access only to the response body.
-   * To access the full response (for headers, for example), `teaseCourseIterationsCourseIterationIdProjectsGet$Response()` instead.
+   * To access the full response (for headers, for example), `teaseCoursePhaseCourseIterationIdProjectsGet$Response()` instead.
    *
    * This method doesn't expect any request body.
    */
-  teaseCourseIterationsCourseIterationIdProjectsGet(params: TeaseCourseIterationsCourseIterationIdProjectsGet$Params, context?: HttpContext): Observable<Array<Project>> {
-    return this.teaseCourseIterationsCourseIterationIdProjectsGet$Response(params, context).pipe(
+  teaseCoursePhaseCourseIterationIdProjectsGet(params: TeaseCoursePhaseCourseIterationIdProjectsGet$Params, context?: HttpContext): Observable<Array<Project>> {
+    return this.teaseCoursePhaseCourseIterationIdProjectsGet$Response(params, context).pipe(
       map((r: StrictHttpResponse<Array<Project>>): Array<Project> => r.body)
     );
   }

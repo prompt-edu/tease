@@ -23,7 +23,7 @@ export class AllocationsService {
     }
   }
 
-  setAllocations(allocations: Allocation[], sentWebSocketUpdate: Boolean = true): void {
+  setAllocations(allocations: Allocation[], sentWebSocketUpdate: boolean = true): void {
     if (!allocations) {
       allocations = [];
     }
@@ -65,7 +65,7 @@ export class AllocationsService {
   moveStudentToProjectAtPosition(studentId: string, projectId: string, siblingId?: string): void {
     const allocations = this.getAllocationsWithoutStudent(studentId);
     const allocation = this.getAllocationForProjectId(projectId);
-    var positionInAllocation = allocation?.students.indexOf(siblingId) ?? -1;
+    let positionInAllocation = allocation?.students.indexOf(siblingId) ?? -1;
 
     if (allocation && positionInAllocation === -1) {
       positionInAllocation = allocation.students.length;

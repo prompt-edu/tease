@@ -74,23 +74,24 @@
         [formatter]="selectedStatisticsFormatter"></app-statistics>
     }
     @if (viewMode === ViewMode.Students) {
-      @for (students of [allocationData.studentsWithoutTeam]; track students) {
-        <div dragula="STUDENTS" class="d-flex flex-wrap flex-grow-1 gap-1 position-relative">
-          @if (!students.length) {
-            <div class="d-flex flex-column flex-grow-1 rounded-2 border-dashed pe-none position-absolute w-100 h-100">
-              <div class="d-flex flex-column justify-content-center align-items-center flex-grow-1">
-                <fa-icon [icon]="facWarnIcon" class="text-warn fs-l lh-1"></fa-icon>
-                <div class="text-prefix fw-semibold fs-s">Empty Student Pool</div>
-                <div class="text-prefix fs-s">Drag Student Here</div>
-              </div>
+      <div
+        dragula="STUDENTS"
+        class="d-flex flex-wrap flex-grow-1 gap-1 position-relative"
+        [ngClass]="allocationData.studentsWithoutTeam.length ? 'mb-auto' : ''">
+        @if (!allocationData.studentsWithoutTeam.length) {
+          <div class="d-flex flex-column flex-grow-1 rounded-2 border-dashed pe-none position-absolute w-100 h-100">
+            <div class="d-flex flex-column justify-content-center align-items-center flex-grow-1">
+              <fa-icon [icon]="facWarnIcon" class="text-warn fs-l lh-1"></fa-icon>
+              <div class="text-prefix fw-semibold fs-s">Empty Student Pool</div>
+              <div class="text-prefix fs-s">Drag Student Here</div>
             </div>
-          } @else {
-            @for (student of students; track student) {
-              <app-student-preview-card [student]="student"></app-student-preview-card>
-            }
+          </div>
+        } @else {
+          @for (student of allocationData.studentsWithoutTeam; track student.id) {
+            <app-student-preview-card [student]="student"></app-student-preview-card>
           }
-        </div>
-      }
+        }
+      </div>
     }
   </div>
 </div>

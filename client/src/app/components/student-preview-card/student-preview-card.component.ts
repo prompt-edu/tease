@@ -1,5 +1,5 @@
 import { ChangeDetectorRef, Component, Input, OnInit } from '@angular/core';
-import { Student, Device, SkillProficiency, LanguageProficiency } from 'src/app/api/models';
+import { Student, Device, LanguageProficiency } from 'src/app/api/models';
 import { OverlayService } from 'src/app/overlay.service';
 import { ProjectsService } from 'src/app/shared/data/projects.service';
 import { GenderService } from 'src/app/shared/helpers/gender.service';
@@ -19,6 +19,7 @@ class AssignedProjectPreference {
   selector: 'app-student-preview-card',
   templateUrl: './student-preview-card.component.html',
   styleUrl: './student-preview-card.component.scss',
+  standalone: false,
 })
 export class StudentPreviewCardComponent implements OnInit {
   @Input({ required: true }) student: Student;

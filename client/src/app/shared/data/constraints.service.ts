@@ -27,7 +27,7 @@ export class ConstraintsService {
     return this.constraintsSubject$.asObservable();
   }
 
-  setConstraints(constraints: ConstraintWrapper[], sentWebSocketUpdate: Boolean = true): void {
+  setConstraints(constraints: ConstraintWrapper[], sentWebSocketUpdate: boolean = true): void {
     if (!constraints) {
       constraints = [];
     }

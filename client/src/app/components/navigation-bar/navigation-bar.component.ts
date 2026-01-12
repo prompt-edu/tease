@@ -23,6 +23,7 @@ import { IconDefinition } from '@fortawesome/fontawesome-svg-core';
   selector: 'app-navigation-bar',
   templateUrl: './navigation-bar.component.html',
   styleUrl: './navigation-bar.component.scss',
+  standalone: false,
 })
 export class NavigationBarComponent implements OnInit, OnChanges {
   facGroupsIcon = teaseIconPack['facGroupsIcon'];

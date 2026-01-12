@@ -31,21 +31,32 @@ export const API_INTERCEPTOR_PROVIDER: Provider = {
   multi: true,
 };
 
-@NgModule({ declarations: [AppComponent, OverlayHostDirective],
-    bootstrap: [AppComponent], imports: [
-        /* external modules */
-        BrowserModule,
-        NgbModule,
-        AppRoutingModule,
-        DragulaModule.forRoot(),
-        ReactiveFormsModule,
-        BrowserAnimationsModule,
-        ToastrModule.forRoot(),
-        /* own modules */
-        SharedModule,
-        ComponentsModule,
-        environment.production ? ApiModule : ApiModule.forRoot({ rootUrl: 'http://localhost:3001/api' }),
-        FontAwesomeModule], providers: [OverlayService, PromptService, AuthInterceptor, API_INTERCEPTOR_PROVIDER, provideHttpClient(withInterceptorsFromDi())] })
+@NgModule({
+  declarations: [AppComponent, OverlayHostDirective],
+  bootstrap: [AppComponent],
+  imports: [
+    /* external modules */
+    BrowserModule,
+    NgbModule,
+    AppRoutingModule,
+    DragulaModule.forRoot(),
+    ReactiveFormsModule,
+    BrowserAnimationsModule,
+    ToastrModule.forRoot(),
+    /* own modules */
+    SharedModule,
+    ComponentsModule,
+    environment.production ? ApiModule : ApiModule.forRoot({ rootUrl: 'http://localhost:3001/team-allocation/api' }),
+    FontAwesomeModule,
+  ],
+  providers: [
+    OverlayService,
+    PromptService,
+    AuthInterceptor,
+    API_INTERCEPTOR_PROVIDER,
+    provideHttpClient(withInterceptorsFromDi()),
+  ],
+})
 export class AppModule {
   constructor(library: FaIconLibrary) {
     library.addIconPacks(teaseIconPack);

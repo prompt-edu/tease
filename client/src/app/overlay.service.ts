@@ -4,7 +4,7 @@ import { StudentDetailOverlayData } from './shared/models/overlay-data/student-d
 import { ExportOverlayData } from './shared/models/overlay-data/export-overlay-data';
 import { ConstraintBuilderOverlayData } from './shared/models/overlay-data/constraint-builder-overlay-data';
 
-type OverlayData =
+export type OverlayData =
   | ConfirmationOverlayData
   | StudentDetailOverlayData
   | ExportOverlayData
@@ -14,20 +14,16 @@ export interface OverlayComponentData {
 }
 
 export interface OverlayServiceHost {
-  displayComponent(component: Type<OverlayComponentData>, data: any);
+  displayComponent(component: Type<OverlayComponentData>, data: OverlayData);
   closeOverlay();
 }
 
 @Injectable()
 export class OverlayService {
   host: OverlayServiceHost;
-  private displayedComponentData: any = null;
+  private displayedComponentData: OverlayData | null = null;
 
   displayComponent(component: Type<OverlayComponentData>, data?: OverlayData): void {
-    if (this.displayedComponentData && this.displayedComponentData.onClose) {
-      this.displayedComponentData.onClose();
-    }
-
     if (this.host) {
       this.host.displayComponent(component, data);
       this.displayedComponentData = data;
@@ -35,10 +31,6 @@ export class OverlayService {
   }
 
   closeOverlay(): void {
-    if (this.displayedComponentData && this.displayedComponentData.onClose) {
-      this.displayedComponentData.onClose();
-    }
-
     if (this.host) {
       this.host.closeOverlay();
       this.displayedComponentData = null;

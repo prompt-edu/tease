@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output } from '@angular/core';
+import { Component } from '@angular/core';
 import { OverlayService } from 'src/app/overlay.service';
 import { ImportOverlayComponent } from '../import-overlay/import-overlay.component';
 import { facImportIcon } from 'src/assets/icons/icons';
@@ -7,6 +7,7 @@ import { facImportIcon } from 'src/assets/icons/icons';
   selector: 'app-intro-card',
   templateUrl: './intro-card.component.html',
   styleUrls: ['./intro-card.component.scss'],
+  standalone: false,
 })
 export class IntroCardComponent {
   facImportIcon = facImportIcon;

@@ -33,7 +33,7 @@
               "base": "dist/tease"
             },
             "index": "src/index.html",
-            "polyfills": ["zone.js", "./window-global-fix.ts"],
+            "polyfills": ["zone.js", "./window-global-fix.ts", "@angular/localize/init"],
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": ["src/assets"],

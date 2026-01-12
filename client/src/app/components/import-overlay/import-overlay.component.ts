@@ -14,15 +14,14 @@ import { LockedStudentsService } from 'src/app/shared/data/locked-students.servi
 import { CsvParserService } from 'src/app/shared/services/csv-parser.service';
 import { SelectData } from 'src/app/shared/matching/constraints/constraint-functions/constraint-function';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
-import { Subscription } from 'rxjs';
 import { CourseIterationsService } from 'src/app/shared/data/course-iteration.service';
-import { environment } from 'src/environments/environment';
 import { CollaborationService } from 'src/app/shared/services/collaboration.service';
 
 @Component({
   selector: 'app-import-overlay',
   templateUrl: './import-overlay.component.html',
   styleUrls: ['./import-overlay.component.scss'],
+  standalone: false,
 })
 export class ImportOverlayComponent implements OverlayComponentData, OnInit {
   data = null;

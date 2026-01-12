@@ -8,7 +8,7 @@ import { RequestBuilder } from '../../request-builder';
 
 import { Student } from '../../models/student';
 
-export interface TeaseCourseIterationsCourseIterationIdStudentsGet$Params {
+export interface TeaseCoursePhaseCourseIterationIdStudentsGet$Params {
 
 /**
  * Unique identifier of the course iteration
@@ -16,8 +16,8 @@ export interface TeaseCourseIterationsCourseIterationIdStudentsGet$Params {
   courseIterationId: string;
 }
 
-export function teaseCourseIterationsCourseIterationIdStudentsGet(http: HttpClient, rootUrl: string, params: TeaseCourseIterationsCourseIterationIdStudentsGet$Params, context?: HttpContext): Observable<StrictHttpResponse<Array<Student>>> {
-  const rb = new RequestBuilder(rootUrl, teaseCourseIterationsCourseIterationIdStudentsGet.PATH, 'get');
+export function teaseCoursePhaseCourseIterationIdStudentsGet(http: HttpClient, rootUrl: string, params: TeaseCoursePhaseCourseIterationIdStudentsGet$Params, context?: HttpContext): Observable<StrictHttpResponse<Array<Student>>> {
+  const rb = new RequestBuilder(rootUrl, teaseCoursePhaseCourseIterationIdStudentsGet.PATH, 'get');
   if (params) {
     rb.path('courseIterationId', params.courseIterationId, {});
   }
@@ -32,4 +32,4 @@ export function teaseCourseIterationsCourseIterationIdStudentsGet(http: HttpClie
   );
 }
 
-teaseCourseIterationsCourseIterationIdStudentsGet.PATH = '/tease/course-iterations/{courseIterationId}/students';
+teaseCoursePhaseCourseIterationIdStudentsGet.PATH = '/tease/course_phase/{courseIterationId}/students';

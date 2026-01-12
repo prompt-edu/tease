@@ -20,6 +20,7 @@ import { SelectComponent } from '../select/select.component';
   selector: 'app-constraint-builder-nationality',
   templateUrl: './constraint-builder-nationality.component.html',
   styleUrl: './constraint-builder-nationality.component.scss',
+  standalone: false,
 })
 export class ConstraintBuilderNationalityComponent implements OverlayComponentData, OnInit {
   facMoreIcon = facMoreIcon;
@@ -81,6 +82,9 @@ export class ConstraintBuilderNationalityComponent implements OverlayComponentDa
       id: project.id,
       name: project.name,
     }));
+    this.projectsService.getProjects().forEach(project => {
+      this.projectsSelectData.find(p => p.id === project.id).selected = true;
+    });
   }
   close(): void {
     this.overlayService.switchComponent(ConstraintSummaryComponent);

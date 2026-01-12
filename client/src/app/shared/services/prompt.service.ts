@@ -1,12 +1,12 @@
 import { Injectable } from '@angular/core';
 import { ApiService } from '../../api/api.service';
 import { ApiFnRequired } from '../../api/api.service';
-import { teaseCourseIterationsCourseIterationIdProjectsGet as getProjects } from '../../api/fn/projects/tease-course-iterations-course-iteration-id-projects-get';
-import { teaseCourseIterationsCourseIterationIdSkillsGet as getSkills } from '../../api/fn/skills/tease-course-iterations-course-iteration-id-skills-get';
-import { teaseCourseIterationsCourseIterationIdStudentsGet as getStudents } from '../../api/fn/students/tease-course-iterations-course-iteration-id-students-get';
-import { teaseCourseIterationsCourseIterationIdAllocationsGet as getAllocations } from '../../api/fn/allocations/tease-course-iterations-course-iteration-id-allocations-get';
-import { teaseCourseIterationsCourseIterationIdAllocationsPost as postAllocations } from 'src/app/api/fn/allocations/tease-course-iterations-course-iteration-id-allocations-post';
-import { courseIterationsGet as getCourseIterations } from 'src/app/api/fn/course-iterations/course-iterations-get';
+import { teaseCoursePhaseCourseIterationIdProjectsGet as getProjects } from '../../api/fn/projects/tease-course-phase-course-iteration-id-projects-get';
+import { teaseCoursePhaseCourseIterationIdSkillsGet as getSkills } from '../../api/fn/skills/tease-course-phase-course-iteration-id-skills-get';
+import { teaseCoursePhaseCourseIterationIdStudentsGet as getStudents } from '../../api/fn/students/tease-course-phase-course-iteration-id-students-get';
+import { teaseCoursePhaseCourseIterationIdAllocationsGet as getAllocations } from '../../api/fn/allocations/tease-course-phase-course-iteration-id-allocations-get';
+import { teaseCoursePhaseCourseIterationIdAllocationsPost as postAllocations } from 'src/app/api/fn/allocations/tease-course-phase-course-iteration-id-allocations-post';
+import { teaseCoursePhasesGet as getCourseIterations } from 'src/app/api/fn/course-iterations/tease-course-phases-get';
 import { Observable, lastValueFrom } from 'rxjs';
 import { Skill, Student, Project, Allocation, CourseIteration } from 'src/app/api/models';
 import { StrictHttpResponse } from 'src/app/api/strict-http-response';

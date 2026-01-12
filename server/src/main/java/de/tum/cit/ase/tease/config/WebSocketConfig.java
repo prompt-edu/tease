@@ -18,6 +18,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/ws").setAllowedOriginPatterns("*.ase.cit.tum.de").setAllowedOrigins("http://localhost");
+        registry.addEndpoint("/ws").setAllowedOriginPatterns("*.aet.cit.tum.de").setAllowedOrigins("http://localhost");
     }
 }

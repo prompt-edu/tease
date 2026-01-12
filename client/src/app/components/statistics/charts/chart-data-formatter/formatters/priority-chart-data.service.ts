@@ -47,17 +47,12 @@ export class PriorityChartDataService implements ChartDataFormatter {
     const data: ChartProjectData[] = [];
 
     const projectCount = allocationData.projectsData.length;
-    let priorityMaps = this.getPriorityMaps(allocationData.projectsData);
+    const priorityMaps = this.getPriorityMaps(allocationData.projectsData);
     const highestPriorityCount = this.getHighestPriorityCount(priorityMaps);
 
     allocationData.projectsData.forEach(projectData => {
       const priorityMap = priorityMaps.get(projectData.project.id);
-      const barChartOptions = this.getChartConfigurationOptions(
-        projectData,
-        priorityMap,
-        projectCount,
-        highestPriorityCount
-      );
+      const barChartOptions = this.getChartConfigurationOptions(projectData, projectCount, highestPriorityCount);
 
       const labels = Array.from({ length: projectCount }, (_, index) => index.toString());
 
@@ -147,7 +142,7 @@ export class PriorityChartDataService implements ChartDataFormatter {
     return priorityMaps;
   }
 
-  private getTooltipLabel(context: TooltipItem<'bar'>, priorityMap: number[]): string {
+  private getTooltipLabel(context: TooltipItem<'bar'>): string {
     const studentCount = context.parsed.y;
     const priority = context.dataIndex;
     return `Priority ${priority + 1}: ${studentCount}`;
@@ -155,7 +150,6 @@ export class PriorityChartDataService implements ChartDataFormatter {
 
   private getChartConfigurationOptions(
     projectData: ProjectData,
-    priorityMap: number[],
     xMax: number,
     yMax: number
   ): ChartConfiguration<'bar'>['options'] {
@@ -189,8 +183,8 @@ export class PriorityChartDataService implements ChartDataFormatter {
         },
         tooltip: {
           callbacks: {
-            title: _ => projectData.project.name,
-            label: context => this.getTooltipLabel(context, priorityMap),
+            title: () => projectData.project.name,
+            label: context => this.getTooltipLabel(context),
           },
         },
       },

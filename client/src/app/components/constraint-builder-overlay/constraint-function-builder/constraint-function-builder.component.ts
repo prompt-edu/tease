@@ -1,4 +1,4 @@
-import { Component, EventEmitter, OnDestroy, OnInit, Output, Input, AfterViewInit } from '@angular/core';
+import { Component, EventEmitter, OnDestroy, OnInit, Output, Input } from '@angular/core';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { Skill, Student } from 'src/app/api/models';
@@ -22,6 +22,7 @@ import { TeamSizeConstraintFunction } from 'src/app/shared/matching/constraints/
   selector: 'app-constraint-function-builder',
   templateUrl: './constraint-function-builder.component.html',
   styleUrl: './constraint-function-builder.component.scss',
+  standalone: false,
 })
 export class ConstraintFunctionBuilderComponent implements OnInit, OnDestroy {
   private students: Student[] = [];

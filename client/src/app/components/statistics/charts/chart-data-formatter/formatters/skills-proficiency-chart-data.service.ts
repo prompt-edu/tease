@@ -13,7 +13,6 @@ import { SkillsService } from 'src/app/shared/data/skills.service';
   providedIn: 'root',
 })
 export class SkillsProficiencyChartDataService implements ChartDataFormatter {
-  private readonly SKILL_PROFICIENCY_LABELS = Object.values(SkillProficiency);
   private readonly BACKGROUND_COLORS = [...ColorService.getSkillProficiencyColors()];
 
   constructor(private skillsService: SkillsService) {}
@@ -43,6 +42,7 @@ export class SkillsProficiencyChartDataService implements ChartDataFormatter {
       },
     ];
 
+    console.log({ labels: skillProficiencies, datasets: datasets });
     return { labels: skillProficiencies, datasets: datasets };
   }
 
@@ -50,7 +50,6 @@ export class SkillsProficiencyChartDataService implements ChartDataFormatter {
     const data: ChartProjectData[] = allocationData.projectsData.map(projectData => {
       return this.getPeopleChartProjectData(projectData, skillId);
     });
-
     return data;
   }
 

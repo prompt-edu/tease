@@ -6,6 +6,7 @@ import { ConfirmationOverlayData } from 'src/app/shared/models/overlay-data/conf
   selector: 'app-confirmation-overlay',
   templateUrl: './confirmation-overlay.component.html',
   styleUrls: ['./confirmation-overlay.component.scss'],
+  standalone: false,
 })
 export class ConfirmationOverlayComponent implements OverlayComponentData, OnInit {
   data: ConfirmationOverlayData;

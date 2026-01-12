@@ -4,7 +4,7 @@ services:
     container_name: tease
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.tease.rule=Host(`${SERVER_HOST}`) && PathPrefix(`/tease`)"
+      - "traefik.http.routers.tease.rule=Host(`${CORE_HOST}`) && PathPrefix(`/tease`)"
       - "traefik.http.middlewares.tease-stripprefix.stripprefix.prefixes=/tease"
       - "traefik.http.routers.tease.middlewares=tease-stripprefix"
       - "traefik.http.routers.tease.entrypoints=websecure"
@@ -19,13 +19,13 @@ services:
     container_name: tease-server
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.tease-server.rule=Host(`${SERVER_HOST}`) && PathPrefix(`/ws`)"
+      - "traefik.http.routers.tease-server.rule=Host(`${CORE_HOST}`) && PathPrefix(`/ws`)"
       - "traefik.http.services.tease-server.loadbalancer.server.port=8081"
       - "traefik.http.routers.tease-server.entrypoints=websecure"
       - "traefik.http.routers.tease-server.tls.certresolver=letsencrypt"
       - "traefik.http.middlewares.jwt.plugin.jwt.JwtQueryKey=token"
       - "traefik.http.middlewares.jwt.plugin.jwt.PayloadFields=exp"
-      - "traefik.http.middlewares.jwt.plugin.jwt.Keys=${KEYCLOAK_JWK_SET_URI}"
+      - "traefik.http.middlewares.jwt.plugin.jwt.Keys=${KEYCLOAK_JWT_URI}"
       - "traefik.http.routers.tease-server.middlewares=jwt"
     expose:
       - "8081"

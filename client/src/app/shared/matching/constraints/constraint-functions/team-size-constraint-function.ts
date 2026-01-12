@@ -7,7 +7,7 @@ export class TeamSizeConstraintFunction extends ConstraintFunction {
     super(students, skills, 'Team Size', [Operator.EQUALS]);
   }
 
-  override filterStudentsByConstraintFunction(property: string, operator: Operator, value: string): Student[] {
+  override filterStudentsByConstraintFunction(): Student[] {
     return this.students;
   }
 
@@ -19,7 +19,7 @@ export class TeamSizeConstraintFunction extends ConstraintFunction {
     return [{ id: 'cf-team-size-default-value', name: 'true' }];
   }
 
-  override getDescription(property: string, operator: Operator, value: string): string {
+  override getDescription(): string {
     return `Team Size`;
   }
 }

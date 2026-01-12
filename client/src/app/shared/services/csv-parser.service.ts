@@ -12,7 +12,6 @@ import {
   StudentSkill,
 } from 'src/app/api/models';
 import { CsvStudent } from '../models/csvStudent';
-import { ToastsService } from './toasts.service';
 import { v4 as uuidv4 } from 'uuid';
 import { EnumService } from '../utils/enum.service';
 import * as Papa from 'papaparse';
@@ -60,7 +59,7 @@ export class CsvParserService {
   }
 
   private findAttributes(student: CsvStudent, value: string): Attribute[] {
-    var regex = new RegExp(`${value}\\[(.*)\\]`);
+    const regex = new RegExp(`${value}\\[(.*)\\]`);
     const attributes = Object.keys(student);
     const matchingAttributes = attributes
       .map(attribute => {
@@ -94,7 +93,7 @@ export class CsvParserService {
     const skillAttributes = this.findAttributes(referenceStudent, 'skill');
     const projectPreferenceAttributes = this.findAttributes(referenceStudent, 'projectPreference');
 
-    var students: Student[] = csvStudents.map(student => {
+    let students: Student[] = csvStudents.map(student => {
       if (!student.id) {
         return null;
       }

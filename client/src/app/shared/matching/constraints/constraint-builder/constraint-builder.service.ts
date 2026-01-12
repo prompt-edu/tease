@@ -35,7 +35,7 @@ export class ConstraintBuilderService {
     constraintWrappers: ConstraintWrapper[],
     locks: StudentIdToProjectIdMapping
   ): string[] {
-    var constraints: string[] = this.mandatoryConstraintsServce.createConstraints(students, projectIds);
+    const constraints: string[] = this.mandatoryConstraintsServce.createConstraints(students, projectIds);
     constraints.push(...this.customConstraintsService.createConstraints(constraintWrappers));
     constraints.push(this.costFunctionsService.createCostFunction(students));
     constraints.push(...this.lockedConstraintsService.createConstraints(locks));

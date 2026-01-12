@@ -8,6 +8,7 @@ import { Subscription } from 'rxjs';
   selector: 'app-projects',
   templateUrl: './projects.component.html',
   styleUrl: './projects.component.scss',
+  standalone: false,
 })
 export class ProjectsComponent implements OnInit, OnDestroy {
   facErrorIcon = facErrorIcon;
@@ -16,7 +17,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   facWarnIcon = facWarnIcon;
 
   @Input({ required: true }) projectsData: ProjectData[];
-  @Input() imageExport: Boolean = false;
+  @Input() imageExport: boolean = false;
   constraintsVisible = false;
 
   lockedStudents: string[] = [];

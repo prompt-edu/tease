@@ -1,4 +1,3 @@
-import { Student } from 'src/app/api/models';
 import { Operator } from './constraint-utils';
 
 export class ConstraintWrapper {

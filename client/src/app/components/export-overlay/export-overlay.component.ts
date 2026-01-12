@@ -18,6 +18,7 @@ import { CourseIterationsService } from 'src/app/shared/data/course-iteration.se
   selector: 'app-export-overlay',
   templateUrl: './export-overlay.component.html',
   styleUrls: ['./export-overlay.component.scss'],
+  standalone: false,
 })
 export class ExportOverlayComponent implements OverlayComponentData {
   public data: {

@@ -6,9 +6,9 @@ import { filter, map } from 'rxjs/operators';
 import { StrictHttpResponse } from '../../strict-http-response';
 import { RequestBuilder } from '../../request-builder';
 
-import { Skill } from '../../models/skill';
+import { Allocation } from '../../models/allocation';
 
-export interface TeaseCourseIterationsCourseIterationIdSkillsGet$Params {
+export interface TeaseCoursePhaseCourseIterationIdAllocationsGet$Params {
 
 /**
  * Unique identifier of the course iteration
@@ -16,8 +16,8 @@ export interface TeaseCourseIterationsCourseIterationIdSkillsGet$Params {
   courseIterationId: string;
 }
 
-export function teaseCourseIterationsCourseIterationIdSkillsGet(http: HttpClient, rootUrl: string, params: TeaseCourseIterationsCourseIterationIdSkillsGet$Params, context?: HttpContext): Observable<StrictHttpResponse<Array<Skill>>> {
-  const rb = new RequestBuilder(rootUrl, teaseCourseIterationsCourseIterationIdSkillsGet.PATH, 'get');
+export function teaseCoursePhaseCourseIterationIdAllocationsGet(http: HttpClient, rootUrl: string, params: TeaseCoursePhaseCourseIterationIdAllocationsGet$Params, context?: HttpContext): Observable<StrictHttpResponse<Array<Allocation>>> {
+  const rb = new RequestBuilder(rootUrl, teaseCoursePhaseCourseIterationIdAllocationsGet.PATH, 'get');
   if (params) {
     rb.path('courseIterationId', params.courseIterationId, {});
   }
@@ -27,9 +27,9 @@ export function teaseCourseIterationsCourseIterationIdSkillsGet(http: HttpClient
   ).pipe(
     filter((r: any): r is HttpResponse<any> => r instanceof HttpResponse),
     map((r: HttpResponse<any>) => {
-      return r as StrictHttpResponse<Array<Skill>>;
+      return r as StrictHttpResponse<Array<Allocation>>;
     })
   );
 }
 
-teaseCourseIterationsCourseIterationIdSkillsGet.PATH = '/tease/course-iterations/{courseIterationId}/skills';
+teaseCoursePhaseCourseIterationIdAllocationsGet.PATH = '/tease/course_phase/{courseIterationId}/allocations';

@@ -21,7 +21,7 @@
         </div>
         <div class="d-flex justify-content-start">
           <div class="d-inline-flex gap-1" [ngbTooltip]="student.introCourseProficiency">
-            @for (skillColor of skillColors; track skillColor) {
+            @for (skillColor of skillColors; track $index) {
               <div class="rounded-circle student-skill-circle" [ngClass]="'bg-' + skillColor"></div>
             }
           </div>
@@ -128,7 +128,7 @@
             <div class="bg-card rounded-3 p-3">
               <p class="fs-6 text-dark mb-2">{{ skill.title }}</p>
               <div class="d-flex gap-05">
-                @for (color of skill.colors; track color) {
+                @for (color of skill.colors; track $index) {
                   <div class="rounded-circle student-skill-circle" [ngClass]="'bg-' + color"></div>
                 }
               </div>

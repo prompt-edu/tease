@@ -1,4 +1,4 @@
-import { ConstraintFunction, SelectData, PropertySelectGroup, ConstraintFunctionValues } from './constraint-function';
+import { ConstraintFunction, SelectData, PropertySelectGroup } from './constraint-function';
 import { Device, Skill, Student } from 'src/app/api/models';
 import { Operator } from '../constraint-utils';
 

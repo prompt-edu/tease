@@ -8,17 +8,20 @@ import { RequestBuilder } from '../../request-builder';
 
 import { CourseIteration } from '../../models/course-iteration';
 
-export interface CourseIterationsGet$Params {
-}
+export interface TeaseCoursePhasesGet$Params {}
 
-export function courseIterationsGet(http: HttpClient, rootUrl: string, params?: CourseIterationsGet$Params, context?: HttpContext): Observable<StrictHttpResponse<Array<CourseIteration>>> {
-  const rb = new RequestBuilder(rootUrl, courseIterationsGet.PATH, 'get');
+export function teaseCoursePhasesGet(
+  http: HttpClient,
+  rootUrl: string,
+  params?: TeaseCoursePhasesGet$Params,
+  context?: HttpContext
+): Observable<StrictHttpResponse<Array<CourseIteration>>> {
+  const rb = new RequestBuilder(rootUrl, teaseCoursePhasesGet.PATH, 'get');
+  console.log('teaseCoursePhasesGet', teaseCoursePhasesGet.PATH, rootUrl);
   if (params) {
   }
 
-  return http.request(
-    rb.build({ responseType: 'json', accept: 'application/json', context })
-  ).pipe(
+  return http.request(rb.build({ responseType: 'json', accept: 'application/json', context })).pipe(
     filter((r: any): r is HttpResponse<any> => r instanceof HttpResponse),
     map((r: HttpResponse<any>) => {
       return r as StrictHttpResponse<Array<CourseIteration>>;
@@ -26,4 +29,4 @@ export function courseIterationsGet(http: HttpClient, rootUrl: string, params?: 
   );
 }
 
-courseIterationsGet.PATH = '/course-iterations';
+teaseCoursePhasesGet.PATH = '/tease/course-phases';

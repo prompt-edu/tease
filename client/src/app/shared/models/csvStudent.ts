@@ -1,5 +1,3 @@
-import { Gender } from 'src/app/api/models';
-
 export interface CsvStudent {
   firstName: string;
   lastName: string;
@@ -12,5 +10,6 @@ export interface CsvStudent {
   skillLevel: string; // introCourseProficiency
   nationality: string;
 
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   [key: string]: any;
 }

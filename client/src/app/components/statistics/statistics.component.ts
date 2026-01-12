@@ -1,14 +1,11 @@
-import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
+import { Component, Input, OnChanges, OnInit } from '@angular/core';
 import { ChartConfiguration } from 'chart.js';
 import { AllocationData } from 'src/app/shared/models/allocation-data';
-import { IntroCourseProficiencyChartDataService } from './charts/chart-data-formatter/formatters/intro-course-proficiency-chart-data.service';
-import { PriorityChartDataService } from './charts/chart-data-formatter/formatters/priority-chart-data.service';
 import { ChartProjectData } from './charts/chart-data-formatter/people-chart-data';
-import { SelectData } from 'src/app/shared/matching/constraints/constraint-functions/constraint-function';
 import { ChartDataFormatter } from './charts/chart-data-formatter/chart-data-formatter';
-import { SkillsProficiencyChartDataService } from './charts/chart-data-formatter/formatters/skills-proficiency-chart-data.service';
 
 @Component({
+  standalone: false,
   selector: 'app-statistics',
   templateUrl: './statistics.component.html',
   styleUrl: './statistics.component.scss',

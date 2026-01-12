@@ -1,5 +1,6 @@
 import { Skill, Student } from 'src/app/api/models';
 import { Operator, OperatorMapping } from '../constraint-utils';
+import { ChartDataFormatter } from 'src/app/components/statistics/charts/chart-data-formatter/chart-data-formatter';
 
 export interface ConstraintFunctionValues {
   property: SelectData;
@@ -13,7 +14,7 @@ export interface SelectData {
   name: string; //shown in the dropdown
   id: string; //value to be used in constraint
   group?: string; //grouping for the dropdown
-  reference?: any; //reference to the object
+  reference?: ChartDataFormatter; //reference to the object
   selected?: boolean; //if the element is selected
 }
 

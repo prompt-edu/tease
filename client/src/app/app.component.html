@@ -1,8 +1,12 @@
 @if (dataLoaded) {
-  <div class="bg-bright h-100 d-flex flex-column gap-2">
+  <div class="bg-bright h-100 d-flex flex-column">
     <app-navigation-bar [allocationData]="allocationData"></app-navigation-bar>
     <app-projects class="flex-grow-1 overflow-hidden" [projectsData]="allocationData.projectsData"></app-projects>
-    <app-utility [allocationData]="allocationData"></app-utility>
+    <div
+      class="resizable"
+      (mousedown)="startResize($event)"
+      [class.resizable-active]="utilityRef.utilityContainerVisible"></div>
+    <app-utility #utilityRef [allocationData]="allocationData"></app-utility>
   </div>
 } @else {
   <div class="d-flex justify-content-center align-items-center h-100">

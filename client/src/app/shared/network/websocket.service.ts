@@ -1,9 +1,8 @@
-import { Injectable, OnDestroy } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { CompatClient, Stomp } from '@stomp/stompjs';
 import { StompSubscription } from '@stomp/stompjs/src/stomp-subscription';
 import { Allocation } from 'src/app/api/models';
 import { ConstraintWrapper } from '../matching/constraints/constraint';
-import { environment } from 'src/environments/environment';
 import { GLOBALS } from '../utils/constants';
 
 export interface CollaborationData {
@@ -22,7 +21,7 @@ export class WebsocketService {
 
   constructor() {}
 
-  private async connect(): Promise<Boolean> {
+  private async connect(): Promise<boolean> {
     return new Promise((resolve, reject) => {
       if (this.connection?.connected) {
         resolve(true);
@@ -52,6 +51,7 @@ export class WebsocketService {
   async subscribe(
     courseIterationId: string,
     topic: string,
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
     onMessage: (data: any) => void
   ): Promise<StompSubscription> {
     const connected = await this.connect();

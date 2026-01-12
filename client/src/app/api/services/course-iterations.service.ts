@@ -10,8 +10,8 @@ import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
 import { CourseIteration } from '../models/course-iteration';
-import { courseIterationsGet } from '../fn/course-iterations/course-iterations-get';
-import { CourseIterationsGet$Params } from '../fn/course-iterations/course-iterations-get';
+import { teaseCoursePhasesGet } from '../fn/course-iterations/tease-course-phases-get';
+import { TeaseCoursePhasesGet$Params } from '../fn/course-iterations/tease-course-phases-get';
 
 @Injectable({ providedIn: 'root' })
 export class CourseIterationsService extends BaseService {
@@ -19,8 +19,8 @@ export class CourseIterationsService extends BaseService {
     super(config, http);
   }
 
-  /** Path part for operation `courseIterationsGet()` */
-  static readonly CourseIterationsGetPath = '/course-iterations';
+  /** Path part for operation `teaseCoursePhasesGet()` */
+  static readonly TeaseCoursePhasesGetPath = '/tease/course-phases';
 
   /**
    * Retrieve all course iterations.
@@ -28,12 +28,12 @@ export class CourseIterationsService extends BaseService {
    *
    *
    * This method provides access to the full `HttpResponse`, allowing access to response headers.
-   * To access only the response body, use `courseIterationsGet()` instead.
+   * To access only the response body, use `teaseCoursePhasesGet()` instead.
    *
    * This method doesn't expect any request body.
    */
-  courseIterationsGet$Response(params?: CourseIterationsGet$Params, context?: HttpContext): Observable<StrictHttpResponse<Array<CourseIteration>>> {
-    return courseIterationsGet(this.http, this.rootUrl, params, context);
+  teaseCoursePhasesGet$Response(params?: TeaseCoursePhasesGet$Params, context?: HttpContext): Observable<StrictHttpResponse<Array<CourseIteration>>> {
+    return teaseCoursePhasesGet(this.http, this.rootUrl, params, context);
   }
 
   /**
@@ -42,12 +42,12 @@ export class CourseIterationsService extends BaseService {
    *
    *
    * This method provides access only to the response body.
-   * To access the full response (for headers, for example), `courseIterationsGet$Response()` instead.
+   * To access the full response (for headers, for example), `teaseCoursePhasesGet$Response()` instead.
    *
    * This method doesn't expect any request body.
    */
-  courseIterationsGet(params?: CourseIterationsGet$Params, context?: HttpContext): Observable<Array<CourseIteration>> {
-    return this.courseIterationsGet$Response(params, context).pipe(
+  teaseCoursePhasesGet(params?: TeaseCoursePhasesGet$Params, context?: HttpContext): Observable<Array<CourseIteration>> {
+    return this.teaseCoursePhasesGet$Response(params, context).pipe(
       map((r: StrictHttpResponse<Array<CourseIteration>>): Array<CourseIteration> => r.body)
     );
   }

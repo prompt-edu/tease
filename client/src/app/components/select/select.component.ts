@@ -5,6 +5,7 @@ import { SelectData } from 'src/app/shared/matching/constraints/constraint-funct
   selector: 'app-select',
   templateUrl: './select.component.html',
   styleUrl: './select.component.scss',
+  standalone: false,
 })
 export class SelectComponent implements OnInit {
   @Input({ required: true }) elementsData: SelectData[] = [];

@@ -1,5 +1,8 @@
 name: Deploy Docker Image
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     inputs:
@@ -9,6 +12,10 @@ on:
       tease_image_tag:
         default: "latest"
         type: string
+
+    secrets:
+      VM_SSH_PRIVATE_KEY:
+        required: true
 
 jobs:
   deploy:
@@ -29,7 +36,7 @@ jobs:
           proxy_key: ${{ secrets.DEPLOYMENT_GATEWAY_SSH_KEY }}
           proxy_port: ${{ vars.DEPLOYMENT_GATEWAY_PORT }}
           script: |
-            docker compose -f tease/docker-compose.prod.yml --env-file=.env.prod -env-file=tease/tease-env.prod down --remove-orphans --rmi all
+            docker compose -f tease/docker-compose.prod.yml --env-file=.env.prod --env-file=tease/.tease-env.prod down --remove-orphans --rmi all
 
       - name: checkout
         uses: actions/checkout@v4
@@ -46,6 +53,8 @@ jobs:
           proxy_port: ${{ vars.DEPLOYMENT_GATEWAY_PORT }}
           source: "./docker-compose.prod.yml"
           target: /home/${{ vars.VM_USERNAME }}/tease
+          overwrite: true
+          rm: true
 
       - name: SSH to VM and create .tease-env.prod file
         uses: appleboy/ssh-action@v1.2.4
@@ -60,6 +69,7 @@ jobs:
           script: |
             touch tease/.tease-env.prod 
             echo "TEASE_IMAGE_TAG=${{ inputs.tease_image_tag }}" >> tease/.tease-env.prod
+            echo "KEYCLOAK_JWT_URI=${{ vars.KEYCLOAK_JWT_URI }}" >> tease/.tease-env.prod
 
       - name: SSH to VM and Execute Docker-Compose Up
         uses: appleboy/ssh-action@v1.2.4

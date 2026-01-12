@@ -27,11 +27,11 @@ export class LockedStudentsService {
     }
   }
 
-  setLocksAsArray(mapping: [string, string][], sentWebSocketUpdate: Boolean = true): void {
+  setLocksAsArray(mapping: [string, string][], sentWebSocketUpdate: boolean = true): void {
     this.setLocks(new Map(mapping), sentWebSocketUpdate);
   }
 
-  setLocks(mapping: StudentIdToProjectIdMapping, sentWebSocketUpdate: Boolean = true): void {
+  setLocks(mapping: StudentIdToProjectIdMapping, sentWebSocketUpdate: boolean = true): void {
     if (!mapping) {
       mapping = this.newMapping();
     }

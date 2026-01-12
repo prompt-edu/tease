@@ -21,7 +21,6 @@
     "module": "es2020",
     "useDefineForClassFields": false,
     "strictPropertyInitialization": false,
-    "suppressImplicitAnyIndexErrors": true,
     "lib": ["es2022", "dom"],
     "resolveJsonModule": true
   },

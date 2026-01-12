@@ -1,6 +1,6 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { OverlayComponentData } from 'src/app/overlay.service';
-import { Student, Device, SkillProficiency, LanguageProficiency, Skill, StudentSkill } from 'src/app/api/models';
+import { Student, Device, LanguageProficiency, Skill, StudentSkill } from 'src/app/api/models';
 import { OverlayService } from 'src/app/overlay.service';
 import { ProjectsService } from 'src/app/shared/data/projects.service';
 import { GenderService } from 'src/app/shared/helpers/gender.service';
@@ -24,6 +24,7 @@ class SkillDescription {
   selector: 'app-person-detail-overlay',
   templateUrl: './person-detail-overlay.component.html',
   styleUrls: ['./person-detail-overlay.component.scss'],
+  standalone: false,
 })
 export class PersonDetailOverlayComponent implements OnInit, OverlayComponentData {
   facMacIcon = facMacIcon;
