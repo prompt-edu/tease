@@ -6,7 +6,7 @@ COPY src ./src
 RUN mvn clean package
 
 # Stage 2: Run the application
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:25.0.1_8-jre-alpine
 WORKDIR /app
 COPY --from=build /app/target/*.jar ./tease-broker.jar
 EXPOSE 8080
