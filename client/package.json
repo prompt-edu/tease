@@ -68,7 +68,7 @@
     "zone.js": "^0.15.0"
   },
   "overrides": {
-    "semver": "7.6.3",
+    "semver": "7.7.3",
     "postcss": "8.5.6",
     "ng2-dragula": {
       "@angular/common": "$@angular/common",
