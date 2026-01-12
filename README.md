@@ -33,12 +33,12 @@ TEASE follows a modern microservices architecture with separate client and serve
 ### Technology Stack
 
 **Client**
-- **Framework**: Angular 19.2.18
-- **UI Library**: Bootstrap 5.3.8 + ng-bootstrap 18.0.0
+- **Framework**: Angular 21.0.7
+- **UI Library**: Bootstrap 5.3.8 + ng-bootstrap 20.0.0
 - **State Management**: RxJS 7.8.2
 - **Real-time Communication**: STOMP over WebSocket
-- **Charts**: Chart.js 4.5.1 + ng2-charts
-- **Build**: Angular CLI with esbuild
+- **Charts**: Chart.js 4.5.1 + ng2-charts 8.0.0
+- **Build**: Angular CLI 21 with esbuild
 
 **Server**
 - **Framework**: Spring Boot 3.5.9
