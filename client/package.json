@@ -97,7 +97,7 @@
     "@typescript-eslint/parser": "^8.52.0",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "10.1.8",
-    "eslint-plugin-prettier": "5.5.4",
+    "eslint-plugin-prettier": "5.5.5",
     "ng-openapi-gen": "^1.0.5",
     "prettier": "^3.7.4",
     "prettier-eslint": "^16.4.2",
