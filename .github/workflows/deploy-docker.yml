@@ -25,7 +25,7 @@ jobs:
       url: "https://${{ vars.VM_HOST }}"
     steps:
       - name: SSH to VM and Execute Docker-Compose Down
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.2.4
         continue-on-error: true
         with:
           host: ${{ vars.VM_HOST }}
@@ -57,7 +57,7 @@ jobs:
           rm: true
 
       - name: SSH to VM and create .tease-env.prod file
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.2.4
         with:
           host: ${{ vars.VM_HOST }}
           username: ${{ vars.VM_USERNAME }}
@@ -72,7 +72,7 @@ jobs:
             echo "KEYCLOAK_JWT_URI=${{ vars.KEYCLOAK_JWT_URI }}" >> tease/.tease-env.prod
 
       - name: SSH to VM and Execute Docker-Compose Up
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.2.4
         with:
           host: ${{ vars.VM_HOST }}
           username: ${{ vars.VM_USERNAME }}
