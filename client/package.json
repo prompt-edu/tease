@@ -87,7 +87,7 @@
     "@angular-eslint/schematics": "^21.1.0",
     "@angular-eslint/template-parser": "^21.1.0",
     "@angular/build": "^21.0.5",
-    "@angular/cli": "21.0.5",
+    "@angular/cli": "21.1.2",
     "@angular/compiler-cli": "21.0.8",
     "@angular/localize": "21.0.8",
     "@cypress/schematic": "^5.0.0",
