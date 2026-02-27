@@ -1,6 +1,6 @@
 services:
   tease:
-    image: ghcr.io/ls1intum/tease:${TEASE_IMAGE_TAG:-latest}
+    image: ghcr.io/ls1intum/tease-client:${TEASE_IMAGE_TAG:-latest}
     container_name: tease
     labels:
       - "traefik.enable=true"
