@@ -81,6 +81,8 @@
     "child_process": false
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.0.0",
+    "@eslint/js": "^10.0.0",
     "@angular-eslint/builder": "^21.3.0",
     "@angular-eslint/eslint-plugin": "^21.3.0",
     "@angular-eslint/eslint-plugin-template": "^21.3.0",

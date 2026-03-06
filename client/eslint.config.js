@@ -16,7 +16,7 @@ module.exports = [
   ...compat.config({
     overrides: [
       {
-        files: ['*.ts'],
+        files: ['src/**/*.ts'],
         extends: [
           'eslint:recommended',
           'plugin:@typescript-eslint/recommended',
@@ -44,13 +44,13 @@ module.exports = [
         },
       },
       {
-        files: ['*.html'],
+        files: ['src/**/*.html'],
         extends: ['plugin:@angular-eslint/template/recommended'],
         rules: {},
       },
       {
-        files: ['*.html'],
-        excludedFiles: ['*inline-template-*.component.html'],
+        files: ['src/**/*.html'],
+        excludedFiles: ['src/**/*inline-template-*.component.html'],
         extends: ['plugin:prettier/recommended'],
         rules: {
           'prettier/prettier': ['error', { parser: 'angular' }],
