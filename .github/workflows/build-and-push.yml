@@ -21,13 +21,13 @@ jobs:
     strategy:
       matrix:
         include:
-          - image-name: ls1intum/tease-client
+          - image-name: prompt-edu/tease-client
             docker-file: ./client/Dockerfile
             docker-context: ./client
-          - image-name: ls1intum/tease-server
+          - image-name: prompt-edu/tease-server
             docker-file: ./server/Dockerfile
             docker-context: ./server
-    uses: ls1intum/.github/.github/workflows/build-and-push-docker-image.yml@v1.1.1
+    uses: ls1intum/.github/.github/workflows/build-and-push-docker-image.yml@v1.2.0
     secrets: inherit
     with:
       image-name: ${{ matrix.image-name }}

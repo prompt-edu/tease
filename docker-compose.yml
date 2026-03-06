@@ -13,7 +13,7 @@ services:
       - "80:80"
       - "8080:8080"
   tease:
-    image: ghcr.io/ls1intum/tease-client:latest
+    image: ghcr.io/prompt-edu/tease-client:latest
     container_name: tease
     labels:
       - "traefik.enable=true"
@@ -26,7 +26,7 @@ services:
     expose:
       - "80"
   tease-server:
-    image: ghcr.io/ls1intum/tease-server:latest
+    image: ghcr.io/prompt-edu/tease-server:latest
     build: ./server
     container_name: tease-server
     labels:
