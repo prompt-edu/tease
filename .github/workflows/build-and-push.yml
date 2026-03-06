@@ -21,7 +21,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - image-name: ls1intum/tease
+          - image-name: ls1intum/tease-client
             docker-file: ./client/Dockerfile
             docker-context: ./client
           - image-name: ls1intum/tease-server
