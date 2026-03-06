@@ -1,6 +1,6 @@
 services:
   tease:
-    image: ghcr.io/ls1intum/tease-client:${TEASE_IMAGE_TAG:-latest}
+    image: ghcr.io/prompt-edu/tease-client:${TEASE_IMAGE_TAG:-latest}
     container_name: tease
     labels:
       - "traefik.enable=true"
@@ -15,7 +15,7 @@ services:
       - prompt-network
 
   tease-server:
-    image: ghcr.io/ls1intum/tease-server:${TEASE_IMAGE_TAG:-latest}
+    image: ghcr.io/prompt-edu/tease-server:${TEASE_IMAGE_TAG:-latest}
     container_name: tease-server
     labels:
       - "traefik.enable=true"
