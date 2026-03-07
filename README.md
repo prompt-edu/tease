@@ -1,271 +1,288 @@
 # TEASE
 
-**T**eam **A**llocation D**e**cision **S**upport Syst**e**m - An intelligent decision-support tool for software engineering team allocation in multi-project courses, as used in the iPraktikum at TUM.
+**T**eam **A**llocation D**e**cision **S**upport Syst**e**m — An intelligent decision-support tool for software engineering team allocation in multi-project courses, as used in the iPraktikum at TUM.
 
-[![Build and Deploy to Dev](https://github.com/ls1intum/tease/actions/workflows/deploy-dev.yml/badge.svg)](https://github.com/ls1intum/tease/actions/workflows/deploy-dev.yml)
-
-📖 **[Full Documentation](https://ls1intum.github.io/tease)** 
+[![Build and Deploy to Dev](https://github.com/prompt-edu/tease/actions/workflows/deploy-dev.yml/badge.svg)](https://github.com/prompt-edu/tease/actions/workflows/deploy-dev.yml)
 
 ---
 
-## 🌟 Overview
+## Overview
 
-TEASE helps educators efficiently allocate students to project teams while considering multiple constraints such as skills, preferences, team diversity, and project requirements. The system uses constraint-based optimization to ensure fair and balanced team compositions.
+TEASE helps educators efficiently allocate students to project teams while considering multiple constraints such as skills, preferences, team diversity, and project requirements. The system uses constraint-based LP optimization to ensure fair and balanced team compositions.
 
 ### Key Features
 
-- 📊 **Constraint-Based Allocation**: Define constraints for team size, skills, diversity (gender, nationality, language)
-- 🎯 **Preference Matching**: Automatically assign students to their preferred projects while meeting all constraints
-- 🔄 **Real-time Collaboration**: Multiple users can work simultaneously with live synchronization
-- 📁 **Data Integration**: Import/export student data via CSV or direct integration with [PROMPT](https://github.com/ls1intum/prompt)
-- 🔒 **Lock Mechanism**: Manually lock specific student allocations that should not change
-- 📸 **Visual Export**: Export team compositions as images or CSV files
-- 📈 **Analytics Dashboard**: View allocation statistics and constraint satisfaction metrics
+- **Constraint-Based Allocation**: Define constraints for team size, skills, diversity (gender, nationality, language)
+- **Preference Matching**: Automatically assign students to preferred projects while meeting all constraints using an LP solver that runs entirely in the browser
+- **Real-time Collaboration**: Multiple users can work simultaneously with live synchronization via bidirectional gRPC streaming
+- **Data Integration**: Import/export student data via CSV or direct integration with [PROMPT](https://github.com/ls1intum/prompt)
+- **Lock Mechanism**: Manually lock specific student allocations that should not change; locks are broadcast to all collaborators
+- **Module Federation**: Exposed as a Vite Module Federation remote — can be embedded in the PROMPT shell without an iframe
 
 ![Dashboard](docs/Dashboard.jpeg)
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
-TEASE follows a modern microservices architecture with separate client and server components:
+TEASE uses a React frontend and a Go backend, communicating via [Connect RPC](https://connectrpc.com) (a gRPC-compatible protocol that works over plain HTTP/2 and HTTP/1.1).
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                       Browser                            │
+│                                                          │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │  React + Vite (Module Federation remote)         │   │
+│  │                                                  │   │
+│  │  Zustand stores ─── LP solver (in-browser)       │   │
+│  │  dnd-kit drag & drop                             │   │
+│  │  Connect-Web ──────► bidirectional gRPC stream   │   │
+│  └──────────────────────────────────────────────────┘   │
+└────────────────────────────┬────────────────────────────┘
+                             │ HTTP/2 (h2c)
+                ┌────────────▼────────────┐
+                │  Go + Connect RPC       │
+                │                        │
+                │  In-memory room state  │
+                │  OCC versioning        │
+                │  Fan-out broadcaster   │
+                └────────────────────────┘
+```
 
 ### Technology Stack
 
-**Client**
-- **Framework**: Angular 21.0.7
-- **UI Library**: Bootstrap 5.3.8 + ng-bootstrap 20.0.0
-- **State Management**: RxJS 7.8.2
-- **Real-time Communication**: STOMP over WebSocket
-- **Charts**: Chart.js 4.5.1 + ng2-charts 8.0.0
-- **Build**: Angular CLI 21 with esbuild
+| Layer | Technology |
+|---|---|
+| Frontend framework | React 18 + TypeScript + Vite |
+| UI components | shadcn/ui (Radix UI + Tailwind CSS) |
+| State management | Zustand 5 with `persist` middleware |
+| Drag & drop | dnd-kit |
+| LP solver | `javascript-lp-solver` (runs in browser) |
+| RPC client | `@connectrpc/connect-web` v1 + `@bufbuild/protobuf` v1 |
+| Module Federation | `@originjs/vite-plugin-federation` |
+| Charts | Recharts |
+| Backend framework | Go 1.24 + `connectrpc.com/connect` v1 |
+| HTTP/2 | `golang.org/x/net/http2/h2c` (no TLS needed behind Traefik) |
+| Proto toolchain | `buf` (schema linting), `protoc` + `protoc-gen-go` + `protoc-gen-connect-go` |
+| Reverse proxy | Traefik v2 |
 
-**Server**
-- **Framework**: Spring Boot 3.5.9
-- **Runtime**: Java 21 (LTS)
-- **WebSocket**: STOMP protocol for real-time communication
-- **Build**: Maven 3.9
+### Repository Layout
+
+```
+tease/
+├── proto/                      # Protobuf contracts (source of truth)
+│   ├── buf.yaml
+│   ├── buf.gen.yaml
+│   └── tease/v1/tease.proto
+│
+├── client-react/               # React frontend
+│   ├── src/
+│   │   ├── gen/               # Generated Connect/protobuf TS (do not edit)
+│   │   ├── types/             # TypeScript interfaces (Student, Project, …)
+│   │   ├── store/             # Zustand stores
+│   │   ├── matching/          # LP solver + constraint system
+│   │   ├── services/          # PromptService, CollaborationService, IdMappingService
+│   │   ├── hooks/             # useCollaboration, useDragDrop
+│   │   └── components/        # React components (Dashboard, ProjectCard, …)
+│   ├── e2e/                   # Playwright end-to-end tests
+│   ├── Dockerfile
+│   └── package.json
+│
+├── server-go/                  # Go backend
+│   ├── cmd/server/main.go     # Entrypoint
+│   ├── pkg/
+│   │   ├── gen/               # Generated Connect/protobuf Go (do not edit)
+│   │   ├── core/state/        # IterationRoom + RoomStore (OCC versioning)
+│   │   ├── core/sync/         # StreamManager + fan-out broadcaster
+│   │   └── handler/           # TeamAllocationServiceHandler
+│   └── Dockerfile
+│
+├── docker-compose.yml
+├── docker-compose.prod.yml
+└── .github/workflows/
+    ├── test.yml               # Unit + E2E tests on every PR
+    ├── build-and-push.yml     # Reusable: build + push Docker images
+    ├── deploy-dev.yml
+    └── deploy-prod.yml
+```
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
-- **Docker & Docker Compose** (recommended)
-- **OR** Node.js 18+ and Java 21+ (for local development)
+- **Docker & Docker Compose** (recommended for running the full stack)
+- **OR** Node.js 22+, Go 1.24+, and `protoc` (for local development)
 
-### Option A: Using Docker (Recommended)
+### Option A: Docker (recommended)
 
-1. **Using pre-built images from GitHub Container Registry:**
-   ```bash
-   docker compose up
-   ```
+```bash
+# Pull pre-built images and start
+docker compose up
 
-2. **Building from source:**
-   ```bash
-   docker compose up --build
-   ```
+# Or build locally first
+docker compose up --build
+```
 
-3. **Access the application:**
-   - Client: http://localhost/tease
-   - Server: http://localhost:8081
+The app is available at **http://localhost/tease**.
+The Go server listens on port **8081** (exposed only internally via Traefik).
 
 ### Option B: Local Development
 
-#### Client Setup
+**1. Start the Go server**
 
 ```bash
-cd client
-npm install
-npm start
+cd server-go
+go run ./cmd/server
+# Server starts on :8081
 ```
-The client will be available at http://localhost:80/
 
-#### Server Setup
+**2. Start the React dev server**
 
 ```bash
-cd server
-mvn clean install
-mvn spring-boot:run
-```
-The server will be available at http://localhost:8081/
-
----
-
-
-## 🔄 CI/CD Pipeline Architecture
-
-TEASE uses a comprehensive GitHub Actions-based CI/CD pipeline for automated building, testing, and deployment.
-
-### Pipeline Overview
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         GitHub Repository                        │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐         │
-│  │   PR Opened  │  │ Push to Main │  │   Release    │         │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘         │
-└─────────┼──────────────────┼──────────────────┼────────────────┘
-          │                  │                  │
-          v                  v                  v
-    ┌─────────┐        ┌──────────┐      ┌──────────┐
-    │ Assign  │        │Build/Push│      │Build/Push│
-    │ Author  │        │  to Dev  │      │ to Prod  │
-    └─────────┘        └────┬─────┘      └────┬─────┘
-                            │                  │
-                    ┌───────┴────────┐  ┌──────┴────────┐
-                    │                │  │               │
-                    v                v  v               v
-            ┌────────────────┐  ┌─────────────┐  ┌─────────────┐
-            │Build & Push    │  │  Deploy     │  │  Deploy     │
-            │Docker Images   │  │  to Dev     │  │  to Prod    │
-            │                │  │             │  │             │
-            │ • Client Image │  │ VM: Dev     │  │ VM: Prod    │
-            │ • Server Image │  │ Environment │  │ Environment │
-            └────────────────┘  └─────────────┘  └─────────────┘
-                    │                  │                  │
-                    v                  v                  v
-            ┌────────────────┐  ┌─────────────┐  ┌─────────────┐
-            │GitHub Container│  │Docker       │  │Docker       │
-            │Registry (GHCR) │  │Compose Up   │  │Compose Up   │
-            └────────────────┘  └─────────────┘  └─────────────┘
+cd client-react
+npm ci
+npm run dev
+# App available at http://localhost:5173
 ```
 
-### Workflow Files
-
-#### 1. **PR Opened** ([`.github/workflows/pr-opened.yml`](.github/workflows/pr-opened.yml))
-- **Trigger**: When a pull request is opened
-- **Actions**: Automatically assigns the PR to its author
-- **Permissions**: `pull-requests: write`
-
-#### 2. **Build and Deploy to Dev** ([`.github/workflows/deploy-dev.yml`](.github/workflows/deploy-dev.yml))
-- **Trigger**: Push to `main` branch or PR to `main`
-- **Actions**:
-  1. Builds Docker images for client and server
-  2. Pushes images to GitHub Container Registry with `latest` tag
-  3. Deploys to development environment via SSH
-- **Permissions**: `contents: read`, `packages: write`
-
-#### 3. **Build and Deploy to Prod** ([`.github/workflows/deploy-prod.yml`](.github/workflows/deploy-prod.yml))
-- **Trigger**: Release published
-- **Actions**:
-  1. Builds Docker images with release version tag
-  2. Pushes to GitHub Container Registry
-  3. Deploys to production environment
-- **Permissions**: `contents: read`, `packages: write`
-
-#### 4. **Build and Push** ([`.github/workflows/build-and-push.yml`](.github/workflows/build-and-push.yml))
-- **Type**: Reusable workflow called by other workflows
-- **Actions**:
-  - Uses multi-stage Docker builds
-  - Builds both client (Angular) and server (Spring Boot) images
-  - Pushes to `ghcr.io/ls1intum/tease` and `ghcr.io/ls1intum/tease-server`
-- **Permissions**: `contents: read`, `packages: write`
-
-#### 5. **Deploy Docker** ([`.github/workflows/deploy-docker.yml`](.github/workflows/deploy-docker.yml))
-- **Type**: Reusable workflow for deployment
-- **Actions**:
-  1. SSH to target VM via deployment gateway (jump host)
-  2. Stop existing containers
-  3. Copy updated docker-compose file
-  4. Start new containers with `docker compose up`
-- **Permissions**: `contents: read`
-
-### Deployment Environments
-
-#### Development Environment
-- **URL**: `https://prompt.ase.cit.tum.de/tease`
-- **Trigger**: Automatic on push to `main`
-- **Purpose**: Testing and validation before production release
-
-#### Production Environment
-- **URL**: `https://prompt.ase.cit.tum.de/tease` (production path)
-- **Trigger**: Manual release creation
-- **Purpose**: Stable version for end users
-
-### Deployment Flow
-
-1. **Code Push/PR Merge** → GitHub Actions triggered
-2. **Multi-stage Docker Build**:
-   - Client: Node.js build → Nginx static serving
-   - Server: Maven build → Java runtime
-3. **Image Push** → GitHub Container Registry
-4. **SSH Deployment**:
-   - Connect via deployment gateway (jump host)
-   - Pull latest images from GHCR
-   - Update docker-compose configuration
-   - Restart services with zero-downtime strategy
-5. **Health Check** → Verify deployment success
-
-### Security Features
-
-- ✅ **Least Privilege Permissions**: Each workflow has minimal required permissions
-- ✅ **Secret Management**: Sensitive data stored in GitHub Secrets
-- ✅ **Jump Host**: Deployment via secure gateway server
-- ✅ **Image Scanning**: Automated security scanning (planned)
-- ✅ **Signed Commits**: Recommended for production releases
+The Vite dev server proxies `/tease.v1.TeamAllocationService` → `http://localhost:8081`, so no CORS configuration is needed locally.
 
 ---
 
-## 🎯 Usage Guide
+## Developer Guide
 
-### Importing Student Data
+### Running Tests
 
-1. **CSV Import**: Upload a CSV file with student information (name, email, skills, preferences)
-2. **PROMPT Integration**: Directly import from PROMPT if logged in as project management team member
+**Go (unit tests with race detector)**
 
-### Creating Constraints
+```bash
+cd server-go
+go test ./... -race
+```
 
-Define allocation rules based on:
-- **Team Size**: Min/max students per team
-- **Skills**: Required technical competencies
-- **Diversity**: Gender, nationality, language distribution
-- **Device Ownership**: Equipment requirements
-- **Project Preferences**: Student ranking of projects
+**React (Vitest unit tests)**
 
-### Running Allocation
+```bash
+cd client-react
+npm test            # watch mode
+npm run test:coverage
+```
 
-1. Click **"Run Allocation"** to execute the constraint solver
-2. System automatically assigns students optimizing for:
-   - Highest preference satisfaction
-   - All constraint fulfillment
-   - Balanced team compositions
-3. Review results in the dashboard with visual feedback
+**End-to-end (Playwright)**
 
-### Exporting Results
+```bash
+# Terminal 1: start Go server
+cd server-go && go run ./cmd/server
 
-- **CSV Export**: Download allocation as spreadsheet
-- **PROMPT Export**: Push results directly to PROMPT system
-- **Team Cards**: Generate visual team composition images
+# Terminal 2: run E2E tests (starts Vite automatically via playwright.config.ts)
+cd client-react && npx playwright test
+```
+
+### Modifying the Proto Schema
+
+The `.proto` file is the single source of truth for the RPC contract. After editing `proto/tease/v1/tease.proto`:
+
+**Regenerate Go code**
+
+```bash
+# Requires: go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+#           go install connectrpc.com/connect/cmd/protoc-gen-connect-go@latest
+protoc \
+  --proto_path=proto \
+  --go_out=server-go/pkg/gen --go_opt=paths=source_relative \
+  --connect-go_out=server-go/pkg/gen --connect-go_opt=paths=source_relative \
+  tease/v1/tease.proto
+```
+
+**Regenerate TypeScript code**
+
+```bash
+# Requires: npm install -g @bufbuild/protoc-gen-es@1 @connectrpc/protoc-gen-connect-es@1
+protoc \
+  --proto_path=proto \
+  --es_out=client-react/src/gen --es_opt=target=ts \
+  --connect-es_out=client-react/src/gen --connect-es_opt=target=ts \
+  tease/v1/tease.proto
+```
+
+> **Important:** The project uses the **v1 stack** — `@bufbuild/protobuf@1`, `@connectrpc/connect@1`, `protoc-gen-es@1`, `protoc-gen-connect-es@1`. Do not upgrade to v2 without regenerating all generated code.
+
+### Architecture Notes
+
+**Optimistic Concurrency Control (OCC)**
+
+Every `MoveStudentRequest` carries the client's current `version`. The server increments a per-room version counter on each successful mutation and rejects requests where `expected_version != room.version`. This prevents lost-update anomalies when two users drag the same student simultaneously.
+
+**Bidirectional streaming**
+
+The browser opens a single long-lived `StreamUpdates` bidi stream per collaboration session. The client side uses a `MessageQueue<ClientUpdate>` async generator to push outgoing messages into the stream without blocking, while a separate `for await` loop consumes incoming `ServerUpdate` messages and applies them to Zustand stores.
+
+**LP solver**
+
+The `javascript-lp-solver` library runs entirely in the browser. The Go server's `SolveAllocation` RPC returns `NOT_IMPLEMENTED` — solving is intentionally client-side. The `ConstraintBuilder` assembles the LP model from constraint wrappers stored in `useConstraintStore`.
+
+**Module Federation**
+
+The build exposes `./Dashboard` at `remoteEntry.js`. When integrated into the PROMPT shell:
+```javascript
+// In PROMPT shell vite.config.ts
+remotes: {
+  tease: 'http://localhost/tease/assets/remoteEntry.js',
+}
+// Usage
+const Dashboard = React.lazy(() => import('tease/Dashboard'))
+```
+
+### Project Conventions
+
+- **Zustand stores** use the `persist` middleware with localStorage. Unit tests require the `LocalStorageMock` class defined in `src/test-setup.ts`.
+- **shadcn/ui components** (e.g. `Card`) use `React.forwardRef` to support `setNodeRef` from dnd-kit.
+- **TypeScript oneof fields** follow the `@bufbuild/protobuf` v1 discriminated-union convention: `{ update: { case: 'moveStudent', value: { ... } } }`.
+- **Go oneof fields** use accessor methods: `msg.GetMoveStudent()`, `msg.GetLockStudent()`, etc.
 
 ---
 
-## 🤝 Integration with PROMPT
+## CI/CD Pipeline
 
-TEASE is designed to work seamlessly with [PROMPT](https://github.com/ls1intum/prompt) (Project Management and Organization Tool):
+### Workflow Overview
 
-- **Single Sign-On**: Shared authentication via Keycloak
-- **Data Synchronization**: Real-time updates between systems
-- **Workflow Continuity**: Import student data from PROMPT, export allocations back
-- **Shared Deployment**: Both applications run on the same infrastructure
+```
+PR to main  ──► test.yml      (Go unit, React unit, Playwright E2E)
+Push to main ──► deploy-dev.yml ──► build-and-push.yml ──► deploy to dev
+Release      ──► deploy-prod.yml ──► build-and-push.yml ──► deploy to prod
+```
+
+### Workflows
+
+| File | Trigger | Purpose |
+|---|---|---|
+| `test.yml` | PR to `main` | Run all tests (Go, React, E2E) |
+| `build-and-push.yml` | Called by deploy workflows | Build + push `tease-client` and `tease-server` Docker images to GHCR |
+| `deploy-dev.yml` | Push to `main` | Deploy to dev environment |
+| `deploy-prod.yml` | Release published | Deploy to production |
+| `pr-opened.yml` | PR opened | Auto-assign PR to author |
+
+Docker images are published to:
+- `ghcr.io/prompt-edu/tease-client`
+- `ghcr.io/prompt-edu/tease-server`
 
 ---
 
-## 📊 Deployment Diagram
+## Integration with PROMPT
 
-![Deployment Diagram](docs/DeploymentDiagram.svg)
+TEASE integrates with [PROMPT](https://github.com/ls1intum/prompt) (Project Management and Organization Tool):
 
-The diagram shows the complete architecture including:
-- Load balancer (Traefik)
-- Frontend (Angular) and Backend (Spring Boot) services
-- Database connections
-- Integration points with PROMPT
+- **Authentication**: Reads a JWT from `localStorage` (set by the PROMPT shell) to authenticate PROMPT API calls
+- **Data import**: `PromptService` fetches course iterations, students, projects, and skills from `${window.location.origin}/team-allocation/api`
+- **Data export**: Pushes final allocations back to PROMPT via REST
+- **Module Federation**: Can be mounted directly inside the PROMPT shell as a remote component — no iframe required
 
+---
 
-## 📝 License
+## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
+This project is licensed under the MIT License — see the LICENSE file for details.
 
 **Made with ❤️ by the AET Team at Technical University of Munich**
