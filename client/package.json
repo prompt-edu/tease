@@ -57,7 +57,7 @@
     "i18n-iso-countries": "^7.14.0",
     "javascript-lp-solver": "0.4.24",
     "jszip": "3.10.1",
-    "ng2-charts": "^9.0.0",
+    "ng2-charts": "^10.0.0",
     "ng2-dragula": "6.0.0",
     "ngx-capture": "^0.14.0",
     "ngx-toastr": "^19.1.0",
