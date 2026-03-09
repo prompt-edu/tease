@@ -34,21 +34,15 @@ To start using TEASE, import the student and project team data. After importing,
 
 The main view of TEASE consists of 3 sections:
 
-- **Navigation Bar**: The navigation bar provides access to various actions such as importing and exporting data, assigning students to project teams and creating constraints.
-- **Project Team Section**: The Project Team section displays all project teams and their members. It shows the number of students in each team and whether the constraints are met.
-- **The Utility Section**: The Utility Section provides access to the student pool, which contains all students not assigned to a project team. The statistics are within the same section. The entire section can be minimized when not in use.
+- **Navigation Bar**: Provides access to various actions. Key buttons include **Data** (import, export, load example, reset allocations), **Constraints** (open the constraint builder), **Sort** (sort students by intro course proficiency), **Statistics** (open the statistics dialog), and **Solve** (run the LP allocation).
+- **Project Team Section**: Displays all project teams and their members. Shows the number of students in each team. Students can be dragged between teams or clicked to view full details.
+- **Unallocated Student Pool**: The right-side panel shows all students not yet assigned to a project team. Students here can be dragged into any project card.
 
 ![TEASE Overview Image](Dashboard.jpeg)
 
 ## Import Data
 
-TEASE offers two ways to import student and project team data:
-
-- PROMPT
-- CSV File
-
-A sample dataset is also available for testing purposes and is displayed in the import modal for direct import.
-The CSV file is also available [here](https://github.com/ls1intum/tease/blob/main/client/src/assets/persons_example.csv).
+Click the **Data** button in the navigation bar and select **Import** to open the import dialog.
 
 ### PROMPT
 
@@ -56,9 +50,8 @@ To use the PROMPT import, TEASE must be deployed on PROMPT.
 Log in to PROMPT as a program manager to authenticate and authorize secure access to student data.
 For detailed information about the PROMPT integration, see the [PROMPT Integration](#prompt-integration) section.
 
-To ensure that the requirements are met, open TEASE with PROMPT from the team allocation section.
-Once the requirements are met, TEASE will prompt the user to import the latest data from PROMPT.
-In the import modal, users can select the specific course iteration to import.
+To ensure that the requirements are met, open TEASE from within PROMPT's team allocation section.
+In the import dialog, select the specific course iteration to import.
 
 ![PROMPT Import](prompt-import.gif)
 
@@ -223,13 +216,19 @@ By pressing the "Distribute Teams" button, the matching algorithm distributes th
 
 ## Statistics
 
-The Statistics section allows users to view detailed statistics about project teams and students. It uses different charts to visualize different metrics. Possible metrics to analyze include:
+Click the **Statistics** button in the navigation bar to open the statistics dialog.
 
-- Priority distribution
-- Skill distributions (Intro Course Proficiency and other imported dynamic skills)
-- Device distributions (iPhone, Mac, iPad, Watch)
+The statistics dialog uses doughnut and per-project bar charts to visualize the current allocation across seven metrics:
 
-The statistics are crucial for assessing the quality of the distribution and are helpful for analyzing and manually fine-tuning the allocation.
+- **Gender** — distribution of female, male, other, and prefer-not-to-say across the cohort
+- **Intro Course Proficiency** — Novice / Intermediate / Advanced / Expert breakdown
+- **Skills Proficiency** — proficiency distribution across all imported dynamic skills
+- **Devices** — ownership of iPhone, Mac, iPad, and Apple Watch
+- **Study Program** — breakdown by academic program (up to 8 distinct programs; remainder grouped as "Other")
+- **Study Degree** — Bachelor, Master, etc.
+- **Project Priority** — how many students received their 1st, 2nd, 3rd, or 4th choice
+
+The statistics are crucial for assessing the quality of the allocation and are helpful for fine-tuning it manually.
 
 ![Statistics](statistics.gif)
 
@@ -246,85 +245,53 @@ The course iteration appears in the navigation bar, with the live collaboration 
 
 ![Live Collaboration](live-collaboration.gif)
 
+### How Collaborative Editing Works
+
+The system uses a **bidirectional Connect RPC stream** (gRPC-compatible, runs over HTTP/2) to synchronize three types of data in real-time:
+
+- **Allocations** — Student assignments to projects
+- **Locked students** — Manually pinned student assignments
+- **Constraints** — Allocation rules (broadcast as JSON)
+
+All clients connected to the same course iteration ID share one server-side room and receive real-time updates when any client makes changes. Optimistic Concurrency Control (OCC) prevents lost-update anomalies when two users drag the same student simultaneously.
+
 ### Testing Collaborative Editing Locally
-
-For local development and testing, you can test the collaborative editing features without requiring PROMPT authentication.
-
-#### How Collaborative Editing Works
-
-The system uses **STOMP over WebSocket** to synchronize three types of data in real-time:
-
-- **Allocations** - Student assignments to projects
-- **Constraints** - Allocation rules and requirements
-- **Locked Students** - Manually locked student assignments
-
-All clients connected to the same course iteration ID will receive real-time updates when any client makes changes.
-
-#### Testing with CSV Import
-
-When using CSV import, collaborative editing requires manual setup since CSV import doesn't automatically create a course iteration ID.
 
 **Quick Manual Test Steps:**
 
-1. **Start the application**:
+1. **Start the full stack**:
 
    ```bash
    docker compose up
+   # OR locally:
+   make dev   # starts Go server on :8081 + React dev server on :5173
    ```
 
-2. **Open two browser windows** pointing to `http://localhost/tease` (or `http://localhost:80/`)
+2. **Open two browser windows** pointing to `http://localhost/tease` (Docker) or `http://localhost:5173` (local dev)
 
-3. **Import CSV data in the first window** (use the example CSV from the import modal)
+3. **Import data** from PROMPT in the first window (collaborative editing is tied to a course iteration ID)
 
-4. **Create a mock course iteration** in both browser windows using DevTools console (`F12` or `Cmd+Option+I`):
+4. **Verify connection**: Look for the "Connect" button or the collaboration status indicator in both windows. Click **Connect** to join the collaboration session.
 
-   ```javascript
-   localStorage.setItem('tease-course-iteration', JSON.stringify({
-     id: 'test-course-123',
-     semesterName: 'Test Semester'
-   }));
-   location.reload();
-   ```
-
-   **Important**: Use the **same course iteration ID** (`test-course-123` in this example) in both windows.
-
-5. **Verify connection**: Look for the "Connected to Collaboration" success toast notification in both windows
-
-6. **Test real-time synchronization**:
-
+5. **Test real-time synchronization**:
    - Drag students between projects in Window 1 → Changes appear in Window 2
    - Add or modify constraints in Window 2 → Updates appear in Window 1
    - Lock/unlock students in Window 1 → Lock status syncs to Window 2
-   - Run the matching algorithm in either window → Results sync to both
 
-#### Testing with PROMPT Import
+### Technical Notes
 
-When using PROMPT import, collaborative editing works automatically:
-
-- The course iteration ID is set automatically from PROMPT
-- WebSocket connection is established immediately after import
-- No manual configuration is required
-
-#### Technical Notes
-
-- **In-Memory Storage**: The server stores collaboration data in memory (not a database), so data is lost on server restart
+- **In-Memory Storage**: The Go server stores room state in memory (not a database), so data is lost on server restart
 - **Same Course Iteration Required**: All clients must use the same course iteration ID to see each other's changes
-- **No Authentication Required for Local Testing**: The WebSocket server allows `http://localhost` connections without JWT authentication
-- **Console Logging**: Open the browser console to see "Received allocations", "Received constraints", and "Received lockedStudents" messages when updates are received
+- **No Authentication Required for Local Testing**: The server allows connections from localhost without JWT validation
 
-#### Troubleshooting
+### Troubleshooting
 
 If collaborative editing isn't working:
 
-1. **Check WebSocket connection**: Look for "Connected to Collaboration" toast notification
-2. **Verify course iteration ID**: Ensure all browser windows have the same course iteration ID:
-
-   ```javascript
-   localStorage.getItem('tease-course-iteration')
-   ```
-
-3. **Check browser console**: Look for WebSocket connection errors or STOMP errors
-4. **Restart server**: Stop and restart `docker compose up` to clear in-memory state
+1. **Check connection**: Look for the collaboration status indicator in the navigation bar
+2. **Verify course iteration ID**: Ensure all browser windows have imported data from the same course iteration
+3. **Check browser console**: Look for Connect RPC or HTTP/2 errors
+4. **Restart server**: Stop and restart `docker compose up` to clear in-memory room state
 5. **Clear browser cache**: Clear localStorage and reload:
 
    ```javascript
@@ -334,11 +301,12 @@ If collaborative editing isn't working:
 
 ## Export Data
 
-TEASE offers three ways to export data:
+Click the **Data** button in the navigation bar and select **Export** to open the export dialog.
+
+TEASE offers two ways to export allocation data:
 
 - PROMPT Integration
 - CSV File
-- Images
 
 ### PROMPT
 
@@ -346,7 +314,7 @@ Similar to the import, to use the PROMPT export, TEASE must be deployed on PROMP
 Log in to PROMPT as a program manager to authenticate and authorize secure access to student data.
 For more details on the PROMPT integration, see the [PROMPT Integration](#prompt-integration) section.
 
-To ensure that the requirements are met, open TEASE with PROMPT from the team allocation section.
+To ensure that the requirements are met, open TEASE from within PROMPT's team allocation section.
 Only data that has been imported from PROMPT can be exported back to PROMPT.
 A message will appear indicating that the export was successful.
 
@@ -354,26 +322,17 @@ A message will appear indicating that the export was successful.
 
 ### CSV File
 
-The CSV export generates a CSV file with all student data and their corresponding project team allocations.
-
-The file has the following format:
-
-| Name        | Team |
-| ----------- | ---- |
-| Alice Smith | TUM  |
-| Bob Johnson | LMU  |
-| Carol Lee   | TUM  |
+The CSV export generates a file listing every allocated student with their assigned project:
 
 ```
-Name,Team
-Alice Smith,TUM
-Bob Johnson,LMU
-Carol Lee,TUM
+projectId,studentId
+proj-abc123,student-def456
+proj-abc123,student-ghi789
 ```
 
-### Images
+## Reset Allocations
 
-The image export generates a ZIP file containing a canvas of all project teams as displayed in the project team section of TEASE, along with individual images for each project team.
+To move all students back to the unallocated pool without losing student or project data, click **Data → Reset Allocations**. A confirmation dialog will appear before the action is performed.
 
 # Installation
 
@@ -395,36 +354,69 @@ The application will be available at `http://localhost:80/tease`.
 
 # Development
 
-TEASE consists of a client and a server. The client is built with [Angular](https://angular.dev/), while the server utilizes [Spring Boot](https://spring.io/projects/spring-boot) with Java and functions as a [STOMP WebSocket Broker](https://docs.spring.io/spring-framework/reference/web/websocket/stomp.html).
+TEASE consists of a React frontend (`client-react/`) and a Go backend (`server-go/`). They communicate via [Connect RPC](https://connectrpc.com), a gRPC-compatible protocol that works over HTTP/2 and HTTP/1.1.
 
-## Client
+## Prerequisites
 
-In the client directory, run `npm install` to install all necessary dependencies.
+- **Node.js 22+** and **npm** for the React client
+- **Go 1.24+** for the Go server
+- **protoc** + plugins for regenerating generated code (optional, only needed when modifying the `.proto` schema)
 
-To start the client, run `npm start` for a development server. After successful compilation, the client is available at `http://localhost:80/`.
+## React Client
 
-The application will automatically reload if any of the source files changes.
+```bash
+cd client-react
+npm install          # install dependencies
+npm run dev          # start dev server at http://localhost:5173
+npm run test         # run Vitest unit tests
+npx playwright test  # run Playwright e2e tests
+```
 
-The PROMPT API is automatically generated using `npm run openapi:generate` and is documented in [openapi_spec.yaml](https://github.com/ls1intum/tease/blob/main/client/docs/openapi_spec.yaml).
-To explore the API documentation use the [Swagger Editor](https://editor.swagger.io/).
-This documentation declares all data objects in TEASE.
+Enable demo mode (shows "Load Example" in the Data menu):
 
-## Server
+```bash
+VITE_DEMO_MODE=true npm run dev
+# OR
+make dev-demo
+```
 
-In the server directory, run `mvn install` to install all necessary dependencies.
+## Go Server
 
-To start the server, run `mvn spring-boot:run`. After successful startup, the server is available at `http://localhost:8081/`.
-The websocket server uses the STOMP messaging protocol to handle real-time communication and message exchange between clients and the server.
+```bash
+cd server-go
+go run ./cmd/server  # start server at http://localhost:8081
+go test ./... -race  # run unit tests with race detector
+```
 
-In general, there are four main STOMP paths:
+The Vite dev server proxies all `/tease.v1.TeamAllocationService` requests to `http://localhost:8081`, so no CORS configuration is needed locally.
 
-- course-iteration/{id}/discovery
-- course-iteration/{id}/allocations
-- course-iteration/{id}/constraints
-- course-iteration/{id}/locked-students
+## Makefile Shortcuts
 
-When a new client sends a message to the discovery channel, they receive all current states of the dynamic data through the other channels.
-Any message sent to the allocations, constraints, or locked-students channels broadcasts to all connected clients, updating them with the latest information.
+```bash
+make install     # install all dependencies (React + Go)
+make dev         # start both services concurrently
+make test        # run React unit tests + Go unit tests
+make e2e         # run Playwright e2e tests
+make proto-gen   # regenerate TypeScript + Go code from proto/tease/v1/tease.proto
+make build       # build React client + Go server
+make clean       # clean build artifacts
+```
+
+## Modifying the Proto Schema
+
+The `.proto` file at `proto/tease/v1/tease.proto` is the single source of truth for the RPC contract.
+After editing it, run:
+
+```bash
+make proto-gen
+```
+
+This requires:
+- `go install google.golang.org/protobuf/cmd/protoc-gen-go@latest`
+- `go install connectrpc.com/connect/cmd/protoc-gen-connect-go@latest`
+- `npm install -g @bufbuild/protoc-gen-es@1 @connectrpc/protoc-gen-connect-es@1`
+
+> **Important:** The project uses the **v1 stack** — `@bufbuild/protobuf@1`, `@connectrpc/connect@1`, `protoc-gen-es@1`, `protoc-gen-connect-es@1`. Do not upgrade to v2 without regenerating all generated code.
 
 # PROMPT Integration
 
