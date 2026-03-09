@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { DndContext, DragOverlay } from '@dnd-kit/core'
+import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { useDroppable } from '@dnd-kit/core'
-import { Play, Users } from 'lucide-react'
+import { Play, Users, ArrowUpDown, BarChart2 } from 'lucide-react'
 import { useDataStore } from '../store/useDataStore'
 import { useAllocationStore, getAllocatedStudentIds } from '../store/useAllocationStore'
 import { useConstraintStore } from '../store/useConstraintStore'
@@ -11,15 +11,23 @@ import { ProjectCard } from './ProjectCard'
 import { StudentCard } from './StudentCard'
 import { CollaborationStatus } from './CollaborationStatus'
 import { ConflictDialog } from './ConflictDialog'
-import { ImportDialog } from './ImportDialog'
-import { ExportDialog } from './ExportDialog'
+import { DataMenuButton } from './DataMenuButton'
 import { ConstraintBuilderDialog } from './ConstraintBuilder/ConstraintBuilderDialog'
 import { StatisticsPanel } from './Statistics/StatisticsPanel'
+import { StudentDetailSheet } from './StudentDetailSheet'
 import { Button } from './ui/button'
 import { buildConstraints } from '../matching/constraints/ConstraintBuilder'
 import { LPSolverStrategy } from '../matching/strategies/LPSolverStrategy'
-import { Student, StudentIdToProjectIdMapping } from '../types'
+import { Student, StudentIdToProjectIdMapping, SkillProficiency } from '../types'
 import toast from 'react-hot-toast'
+
+// Proficiency sort order — Expert first
+const PROFICIENCY_ORDER: SkillProficiency[] = [
+  SkillProficiency.Expert,
+  SkillProficiency.Advanced,
+  SkillProficiency.Intermediate,
+  SkillProficiency.Novice,
+]
 
 // Droppable zone for unallocated students
 function UnallocatedZone() {
@@ -39,6 +47,14 @@ export function Dashboard() {
   const { conflict, connect, disconnect, sendMove, sendLock, sendUnlock } = useCollaboration()
   const [solving, setSolving] = useState(false)
   const [activeStudentId, setActiveStudentId] = useState<string | null>(null)
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
+  const [statsOpen, setStatsOpen] = useState(false)
+
+  // Require 8px of pointer movement before a drag activates, so plain
+  // clicks still fire onClick (opens detail sheet, toggles lock, etc.)
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+  )
 
   const { onDragEnd } = useDragDrop(connected ? sendMove : undefined)
 
@@ -74,6 +90,22 @@ export function Dashboard() {
     }
   }
 
+  function handleSort() {
+    const current = useAllocationStore.getState().allocations
+    const sorted: Record<string, string[]> = {}
+    for (const [projectId, studentIds] of Object.entries(current)) {
+      sorted[projectId] = [...studentIds].sort((a, b) => {
+        const sa = students.find(s => s.id === a)
+        const sb = students.find(s => s.id === b)
+        const ra = PROFICIENCY_ORDER.indexOf(sa?.introCourseProficiency ?? SkillProficiency.Novice)
+        const rb = PROFICIENCY_ORDER.indexOf(sb?.introCourseProficiency ?? SkillProficiency.Novice)
+        return ra - rb
+      })
+    }
+    useAllocationStore.getState().setAllocations(sorted)
+    toast.success('Sorted students by intro course proficiency')
+  }
+
   const activeStudent = activeStudentId ? students.find(s => s.id === activeStudentId) : null
 
   return (
@@ -85,6 +117,15 @@ export function Dashboard() {
         onUseServer={conflict.onUseServer}
         onUseLocal={conflict.onUseLocal}
       />
+
+      {/* Student detail sheet */}
+      <StudentDetailSheet
+        student={selectedStudent}
+        onClose={() => setSelectedStudent(null)}
+      />
+
+      {/* Statistics dialog */}
+      <StatisticsPanel open={statsOpen} onClose={() => setStatsOpen(false)} />
 
       {/* Header */}
       <header className="flex items-center gap-3 border-b px-4 py-2">
@@ -101,9 +142,26 @@ export function Dashboard() {
             Disconnect
           </Button>
         )}
-        <ImportDialog />
-        <ExportDialog />
+        <DataMenuButton />
         <ConstraintBuilderDialog />
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={students.length === 0}
+          onClick={handleSort}
+          title="Sort students by intro course proficiency"
+        >
+          <ArrowUpDown className="h-4 w-4 mr-1" />
+          Sort
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setStatsOpen(true)}
+        >
+          <BarChart2 className="h-4 w-4 mr-1" />
+          Statistics
+        </Button>
         <Button size="sm" disabled={solving || students.length === 0} onClick={handleSolve}>
           <Play className="h-4 w-4 mr-1" />
           {solving ? 'Solving…' : 'Solve'}
@@ -113,6 +171,7 @@ export function Dashboard() {
       {/* Main content */}
       <div className="flex flex-1 overflow-hidden">
         <DndContext
+          sensors={sensors}
           onDragStart={e => setActiveStudentId(e.active.id as string)}
           onDragEnd={e => {
             setActiveStudentId(null)
@@ -130,7 +189,7 @@ export function Dashboard() {
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
                 {projects.map(project => {
                   const projectStudents = (allocations[project.id] || [])
                     .map(sid => students.find(s => s.id === sid))
@@ -149,6 +208,7 @@ export function Dashboard() {
                         useAllocationStore.getState().unlockStudent(sid)
                         if (connected) sendUnlock(sid)
                       }}
+                      onStudentClick={setSelectedStudent}
                     />
                   )
                 })}
@@ -158,7 +218,7 @@ export function Dashboard() {
 
           {/* Unallocated student pool */}
           {students.length > 0 && (
-            <div className="w-56 shrink-0 overflow-y-auto border-l p-3">
+            <div className="w-64 shrink-0 overflow-y-auto border-l p-3">
               <p className="mb-2 text-xs font-medium text-muted-foreground">
                 Unallocated ({unallocatedStudents.length})
               </p>
@@ -177,6 +237,7 @@ export function Dashboard() {
                       useAllocationStore.getState().unlockStudent(sid)
                       if (connected) sendUnlock(sid)
                     }}
+                    onClick={setSelectedStudent}
                   />
                 ))}
               </div>
@@ -185,16 +246,13 @@ export function Dashboard() {
 
           <DragOverlay>
             {activeStudent && (
-              <div className="rounded-md border bg-background p-2 shadow-xl text-sm opacity-90">
+              <div className="rounded-md border bg-background p-2 shadow-xl text-sm opacity-90 z-[100]">
                 {activeStudent.firstName} {activeStudent.lastName}
               </div>
             )}
           </DragOverlay>
         </DndContext>
       </div>
-
-      {/* Statistics */}
-      <StatisticsPanel />
     </div>
   )
 }

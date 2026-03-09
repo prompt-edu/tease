@@ -20,6 +20,7 @@ interface AllocationState {
   setLocks: (locks: Record<string, string>) => void
   setConnected: (connected: boolean) => void
   setVersion: (version: number) => void
+  resetAllocations: () => void
   reset: () => void
 }
 
@@ -66,6 +67,7 @@ export const useAllocationStore = create<AllocationState>()(
       setLocks: locks => set({ locks }),
       setConnected: connected => set({ connected }),
       setVersion: version => set({ version }),
+      resetAllocations: () => set({ allocations: {} }),
       reset: () => set({ allocations: {}, locks: {}, connected: false, version: 0 }),
     }),
     { name: 'tease-allocations' },

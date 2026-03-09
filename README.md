@@ -12,10 +12,13 @@ TEASE helps educators efficiently allocate students to project teams while consi
 
 ### Key Features
 
-- **Constraint-Based Allocation**: Define constraints for team size, skills, diversity (gender, nationality, language)
-- **Preference Matching**: Automatically assign students to preferred projects while meeting all constraints using an LP solver that runs entirely in the browser
+- **Constraint-Based Allocation**: Define constraints for team size, skills, gender, nationality, language, and intro course proficiency
+- **Preference Matching**: LP solver runs entirely in the browser — assigns students to preferred projects while meeting all constraints
+- **Rich Student Cards**: Gravatar avatar, nationality flag, device icons, language proficiency, preference tiles, and proficiency dots — all at a glance
+- **Student Detail Sheet**: Click any student card to open a full detail panel showing skills, preferences, devices, languages, and comments
+- **Statistics Dialog**: 7 metrics (gender, intro course, skills, devices, study program, degree, project priority) visualized with doughnut + per-project bar charts
+- **Data Menu**: Import from PROMPT, export allocations (to PROMPT or CSV), load demo data, or reset allocations — all behind one button with confirmation for destructive actions
 - **Real-time Collaboration**: Multiple users can work simultaneously with live synchronization via bidirectional gRPC streaming
-- **Data Integration**: Import/export student data via CSV or direct integration with [PROMPT](https://github.com/ls1intum/prompt)
 - **Lock Mechanism**: Manually lock specific student allocations that should not change; locks are broadcast to all collaborators
 - **Module Federation**: Exposed as a Vite Module Federation remote — can be embedded in the PROMPT shell without an iframe
 
@@ -155,6 +158,13 @@ The Vite dev server proxies `/tease.v1.TeamAllocationService` → `http://localh
 
 ### Running Tests
 
+**All tests (shortcut)**
+
+```bash
+make test    # React unit tests + Go unit tests
+make e2e     # Playwright end-to-end tests
+```
+
 **Go (unit tests with race detector)**
 
 ```bash
@@ -166,8 +176,9 @@ go test ./... -race
 
 ```bash
 cd client-react
-npm test            # watch mode
-npm run test:coverage
+npm test                 # single run
+npm run test:watch       # watch mode
+npm run test:coverage    # with coverage report
 ```
 
 **End-to-end (Playwright)**

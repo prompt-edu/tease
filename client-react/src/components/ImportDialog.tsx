@@ -15,8 +15,16 @@ import { useAllocationStore } from '../store/useAllocationStore'
 import { Allocation } from '../types'
 import toast from 'react-hot-toast'
 
-export function ImportDialog() {
-  const [open, setOpen] = useState(false)
+interface ImportDialogProps {
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+}
+
+export function ImportDialog({ open: controlledOpen, onOpenChange }: ImportDialogProps = {}) {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = controlledOpen ?? internalOpen
+  const setOpen = onOpenChange ?? setInternalOpen
+  const isControlled = controlledOpen !== undefined
   const [loading, setLoading] = useState(false)
   const { courseIterationId, courseIterations, setCourseIterationId } = useDataStore()
   const [selectedId, setSelectedId] = useState(courseIterationId || '')
@@ -57,12 +65,14 @@ export function ImportDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Download className="h-4 w-4 mr-1.5" />
-          Import
-        </Button>
-      </DialogTrigger>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm">
+            <Download className="h-4 w-4 mr-1.5" />
+            Import
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Import from PROMPT</DialogTitle>

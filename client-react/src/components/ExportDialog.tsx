@@ -15,8 +15,16 @@ import { useAllocationStore } from '../store/useAllocationStore'
 import { Allocation } from '../types'
 import toast from 'react-hot-toast'
 
-export function ExportDialog() {
-  const [open, setOpen] = useState(false)
+interface ExportDialogProps {
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+}
+
+export function ExportDialog({ open: controlledOpen, onOpenChange }: ExportDialogProps = {}) {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = controlledOpen ?? internalOpen
+  const setOpen = onOpenChange ?? setInternalOpen
+  const isControlled = controlledOpen !== undefined
   const [loading, setLoading] = useState(false)
   const { courseIterationId } = useDataStore()
   const { allocations } = useAllocationStore()
@@ -62,12 +70,14 @@ export function ExportDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Upload className="h-4 w-4 mr-1.5" />
-          Export
-        </Button>
-      </DialogTrigger>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm">
+            <Upload className="h-4 w-4 mr-1.5" />
+            Export
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Export Allocations</DialogTitle>

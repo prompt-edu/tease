@@ -70,6 +70,7 @@ export function ProjectCard({
               onLock={onLock}
               onUnlock={onUnlock}
               onClick={onStudentClick}
+              projectId={project.id}
             />
           ))}
         </div>
