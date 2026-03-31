@@ -103,6 +103,6 @@
     "ng-openapi-gen": "^1.0.5",
     "prettier": "^3.7.4",
     "prettier-eslint": "^16.4.2",
-    "typescript": "~5.9.3"
+    "typescript": "~6.0.0"
   }
 }
