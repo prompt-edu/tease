@@ -1,0 +1,12 @@
+.project-picker {
+  min-height: 100vh;
+}
+
+.project-picker-card {
+  width: min(640px, 100%);
+}
+
+.project-picker-list {
+  max-height: 60vh;
+  overflow-y: auto;
+}

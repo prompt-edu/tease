@@ -3,7 +3,42 @@
     <img src="assets/images/logo-s.svg" />
     <div class="text-white fs-3 fw-light">TEASE</div>
     @if (allocationData.courseIteration) {
-      <div class="text-prefix fs-5">{{ allocationData.courseIteration.semesterName }}</div>
+      @if (promptConnected$ | async) {
+        <div
+          ngbDropdown
+          class="project-switcher"
+          (openChange)="$event && loadAvailablePhases()">
+          <button
+            type="button"
+            class="btn btn-project-switcher"
+            id="projectSwitcherDropdown"
+            ngbDropdownToggle>
+            <span class="fs-5 fw-light">{{ allocationData.courseIteration.semesterName }}</span>
+          </button>
+          <div ngbDropdownMenu aria-labelledby="projectSwitcherDropdown" class="project-switcher-menu">
+            <div class="project-switcher-header px-3 py-2">Switch project</div>
+            @if (loadingPhases) {
+              <div class="px-3 py-2 text-muted small">Loading…</div>
+            } @else if (availablePhases.length === 0) {
+              <div class="px-3 py-2 text-muted small">No other projects available.</div>
+            } @else {
+              @for (phase of availablePhases; track phase.id) {
+                <button ngbDropdownItem class="py-2" (click)="switchCoursePhase(phase)">
+                  {{ phase.semesterName }}
+                </button>
+              }
+            }
+          </div>
+        </div>
+      } @else {
+        <div
+          class="project-switcher-disabled fs-5 fw-light"
+          ngbTooltip="Connect to PROMPT to switch between projects"
+          triggers="hover">
+          <span>{{ allocationData.courseIteration.semesterName }}</span>
+          <span class="project-switcher-hint">Connect to PROMPT to open other projects</span>
+        </div>
+      }
 
       @if (websocketService.connection?.connected) {
         <fa-icon
@@ -55,11 +90,49 @@
       <div>Distribute Projects</div>
     </button>
 
+    @if (workspaceActive$ | async) {
+      <div class="save-cluster d-flex align-items-center gap-2">
+        <div class="save-status" [attr.data-state]="saveStatusLabel$ | async">
+          @switch (saveStatusLabel$ | async) {
+            @case ('saving') {
+              <span class="save-status-dot save-status-dot--saving"></span>
+              <span>Saving…</span>
+            }
+            @case ('unsaved') {
+              <span class="save-status-dot save-status-dot--unsaved"></span>
+              <span>Unsaved changes</span>
+            }
+            @case ('saved') {
+              <span class="save-status-dot save-status-dot--saved"></span>
+              <span>Saved</span>
+            }
+          }
+        </div>
+        <button
+          type="button"
+          class="btn btn-icon-text"
+          [class.btn-primary]="(workspaceDirty$ | async) && !(workspaceSaving$ | async)"
+          [class.btn-outline-light]="!(workspaceDirty$ | async) || (workspaceSaving$ | async)"
+          [disabled]="(workspaceSaving$ | async) || !(workspaceDirty$ | async)"
+          (click)="saveToPrompt()"
+          [ngbTooltip]="(saveTooltip$ | async) ?? ''"
+          triggers="hover">
+          <fa-icon [icon]="facExportIcon" class="pe-2 fs-3"></fa-icon>
+          <div>Save</div>
+        </button>
+      </div>
+    }
+
     <div ngbDropdown class="d-inline-block">
       <button type="button" class="btn btn-icon btn-icon-primary" id="moreDropdown" ngbDropdownToggle>
         <fa-icon [icon]="facMoreIcon" class="fs-3 text-white"></fa-icon>
       </button>
       <div ngbDropdownMenu>
+        @if (workspaceActive$ | async) {
+          <button ngbDropdownItem (click)="saveToPrompt()" class="btn-icon-text py-2 text-dark">
+            <fa-icon [icon]="facExportIcon" class="pe-2 fs-3"></fa-icon>Save to PROMPT
+          </button>
+        }
         @for (item of dropdownItems; track item) {
           <button ngbDropdownItem (click)="item.action()" class="btn-icon-text py-2" [ngClass]="item.class">
             <fa-icon [icon]="item.icon" class="pe-2 fs-3"></fa-icon>{{ item.label }}

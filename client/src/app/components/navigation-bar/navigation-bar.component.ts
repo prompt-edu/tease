@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, OnInit } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnInit, Output } from '@angular/core';
 import { OverlayService } from 'src/app/overlay.service';
 import { ConfirmationOverlayComponent } from '../confirmation-overlay/confirmation-overlay.component';
 import { ExportOverlayComponent } from '../export-overlay/export-overlay.component';
@@ -18,6 +18,10 @@ import { CourseIterationsService } from 'src/app/shared/data/course-iteration.se
 import { WebsocketService } from 'src/app/shared/network/websocket.service';
 import { CollaborationService } from 'src/app/shared/services/collaboration.service';
 import { IconDefinition } from '@fortawesome/fontawesome-svg-core';
+import { WorkspaceStateService } from 'src/app/shared/services/workspace-state.service';
+import { PromptConnectionService } from 'src/app/shared/services/prompt-connection.service';
+import { Observable, combineLatest, map } from 'rxjs';
+import { CourseIteration } from 'src/app/api/models';
 
 @Component({
   selector: 'app-navigation-bar',
@@ -42,9 +46,29 @@ export class NavigationBarComponent implements OnInit, OnChanges {
 
   @Input({ required: true }) allocationData: AllocationData;
 
+  /** Emits a course-phase selection from the project-switcher dropdown in the header. */
+  @Output() coursePhaseSelected = new EventEmitter<CourseIteration>();
+
   dropdownItems: { action: () => void; icon: IconDefinition; label: string; class: string }[];
 
   fulfillsAllConstraints = true;
+
+  /** Emits true when the user is editing a PROMPT-backed workspace (not CSV mode). */
+  readonly workspaceActive$: Observable<boolean>;
+  /** "Saving…" in-flight flag from the workspace service. */
+  readonly workspaceSaving$: Observable<boolean>;
+  /** Dirty / has-unsaved-changes flag. */
+  readonly workspaceDirty$: Observable<boolean>;
+  /** Three-way label for the status pill: saving | unsaved | saved. */
+  readonly saveStatusLabel$: Observable<'saving' | 'unsaved' | 'saved'>;
+  /** Observable PROMPT connection state (drives the project-switcher dropdown). */
+  readonly promptConnected$: Observable<boolean>;
+  /** Human-readable tooltip for the Save button ("Last saved 14:32" / "Not yet saved"). */
+  readonly saveTooltip$: Observable<string>;
+
+  /** Course phases available for switching (excludes the currently open one). */
+  availablePhases: CourseIteration[] = [];
+  loadingPhases = false;
 
   constructor(
     private overlayService: OverlayService,
@@ -57,8 +81,60 @@ export class NavigationBarComponent implements OnInit, OnChanges {
     private studentSortService: StudentSortService,
     private courseIterationsService: CourseIterationsService,
     private collaborationService: CollaborationService,
-    public websocketService: WebsocketService
-  ) {}
+    public websocketService: WebsocketService,
+    private workspaceStateService: WorkspaceStateService,
+    private promptConnectionService: PromptConnectionService
+  ) {
+    this.workspaceActive$ = this.workspaceStateService.coursePhaseId$.pipe(map(id => !!id));
+    this.workspaceSaving$ = this.workspaceStateService.saving$;
+    this.workspaceDirty$ = this.workspaceStateService.dirty$;
+    this.saveStatusLabel$ = combineLatest([this.workspaceSaving$, this.workspaceDirty$]).pipe(
+      map(([saving, dirty]) => (saving ? 'saving' : dirty ? 'unsaved' : 'saved'))
+    );
+    // Either the probe marked us connected, OR we've already hydrated a
+    // workspace — a workspace is only ever created after a successful
+    // PROMPT fetch, so `coursePhaseId != null` is itself proof of
+    // connectivity. This makes the header dropdown robust on the
+    // query-param launch path, where the probe may not have completed
+    // by the time the nav bar mounts.
+    this.promptConnected$ = combineLatest([
+      this.promptConnectionService.connected$,
+      this.workspaceStateService.coursePhaseId$,
+    ]).pipe(map(([connected, coursePhaseId]) => connected || !!coursePhaseId));
+
+    this.saveTooltip$ = combineLatest([
+      this.workspaceStateService.lastSavedAt$,
+      this.workspaceStateService.lastExportedAt$,
+    ]).pipe(
+      map(([lastSavedAt, lastExportedAt]) => {
+        const parts: string[] = [];
+        if (lastExportedAt) {
+          parts.push(`Last exported to PROMPT: ${this.formatTimestamp(lastExportedAt)}`);
+        }
+        if (lastSavedAt) {
+          parts.push(`Last autosave: ${this.formatTimestamp(lastSavedAt)}`);
+        }
+        if (parts.length === 0) {
+          return 'Not yet saved — click to save workspace and allocations to PROMPT';
+        }
+        return parts.join(' • ');
+      })
+    );
+  }
+
+  /** Render an ISO timestamp as a short, locale-aware date + time string. */
+  private formatTimestamp(iso: string): string {
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return iso;
+    const today = new Date();
+    const sameDay =
+      date.getFullYear() === today.getFullYear() &&
+      date.getMonth() === today.getMonth() &&
+      date.getDate() === today.getDate();
+    const time = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    if (sameDay) return `today at ${time}`;
+    return `${date.toLocaleDateString()} ${time}`;
+  }
 
   ngOnInit(): void {
     this.updateFulfillsAllConstraints();
@@ -118,6 +194,47 @@ export class NavigationBarComponent implements OnInit, OnChanges {
       allocationData: this.allocationData,
     });
   };
+
+  saveToPrompt = async (): Promise<void> => {
+    await this.workspaceStateService.saveToPrompt();
+  };
+
+  /**
+   * Populate the project-switcher dropdown with the other course phases
+   * available on PROMPT. Excludes the currently open phase. Re-fetches
+   * every time the dropdown opens so the list is fresh.
+   */
+  async loadAvailablePhases(): Promise<void> {
+    if (!this.promptConnectionService.isConnected()) {
+      this.availablePhases = [];
+      return;
+    }
+    this.loadingPhases = true;
+    try {
+      const phases = await this.promptConnectionService.listCoursePhases(true);
+      const currentId = this.allocationData?.courseIteration?.id;
+      this.availablePhases = phases.filter(p => p.id !== currentId);
+    } catch (_err) {
+      this.availablePhases = [];
+    } finally {
+      this.loadingPhases = false;
+    }
+  }
+
+  /**
+   * Switch to a different course phase. Warns when there are unsaved
+   * changes; the autosave (2 s debounce) may not have fired yet.
+   */
+  async switchCoursePhase(phase: CourseIteration): Promise<void> {
+    if (!phase?.id) return;
+    if (this.workspaceStateService.dirty) {
+      const proceed = window.confirm(
+        'You have unsaved changes in the current workspace. Switch projects anyway? Unsaved edits may be lost.'
+      );
+      if (!proceed) return;
+    }
+    this.coursePhaseSelected.emit(phase);
+  }
 
   showSortConfirmation() {
     const overlayData = {

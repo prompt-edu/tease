@@ -13,6 +13,7 @@ import { AllocationData } from 'src/app/shared/models/allocation-data';
 import { NgxCaptureService } from 'ngx-capture';
 import { Observable, forkJoin, map } from 'rxjs';
 import { CourseIterationsService } from 'src/app/shared/data/course-iteration.service';
+import { WorkspaceStateService } from 'src/app/shared/services/workspace-state.service';
 
 @Component({
   selector: 'app-export-overlay',
@@ -31,6 +32,7 @@ export class ExportOverlayComponent implements OverlayComponentData {
   @ViewChild('projectsScreen', { static: true }) projectsScreen: ElementRef;
 
   isLoading = false;
+  isSavingToPrompt = false;
 
   constructor(
     private promptService: PromptService,
@@ -39,9 +41,35 @@ export class ExportOverlayComponent implements OverlayComponentData {
     private projectsService: ProjectsService,
     private studentsService: StudentsService,
     private courseIterationsService: CourseIterationsService,
-    private captureService: NgxCaptureService
+    private captureService: NgxCaptureService,
+    private workspaceStateService: WorkspaceStateService
   ) {}
 
+  /**
+   * Primary "Save to PROMPT" action — persists both the workspace and
+   * the finalised allocations via `POST /tease/course_phase/{id}/save`.
+   *
+   * Only available when a PROMPT course phase is currently hydrated
+   * (Workflow A or B). Defaults to `false` when running in CSV-only mode.
+   */
+  get canSaveToPrompt(): boolean {
+    return !!this.workspaceStateService.coursePhaseId;
+  }
+
+  async saveToPrompt(): Promise<void> {
+    if (!this.canSaveToPrompt) return;
+    this.isSavingToPrompt = true;
+    try {
+      await this.workspaceStateService.saveToPrompt();
+    } finally {
+      this.isSavingToPrompt = false;
+    }
+  }
+
+  /**
+   * Legacy export-only path. Left intact per plan §6.7 — the underlying
+   * POST /allocations endpoint remains callable for other tools.
+   */
   async exportPrompt() {
     const allocations = this.allocationsService.getAllocations();
     try {
