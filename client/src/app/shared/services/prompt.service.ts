@@ -20,30 +20,37 @@ import { GLOBALS } from '../utils/constants';
   providedIn: 'root',
 })
 export class PromptService {
+  /** Wires the shared `ApiService` for all generated HTTP fns. */
   constructor(private apiService: ApiService) {}
 
+  /** Internal helper that invokes a generated API fn with a single-parameter payload. */
   private async fetchValue<P, R>(fn: ApiFnRequired<P, R>, courseIterationId?: string): Promise<R> {
     const param: P = { courseIterationId: courseIterationId } as P;
     const values$ = this.apiService.invoke(fn, param);
     return lastValueFrom(values$);
   }
 
+  /** GET /tease/course_phase/{id}/projects — the projects / teams in a course phase. */
   async getProjects(courseIterationId: string): Promise<Project[]> {
     return this.fetchValue(getProjects, courseIterationId);
   }
 
+  /** GET /tease/course_phase/{id}/skills — the skill dictionary for a course phase. */
   async getSkills(courseIterationId: string): Promise<Skill[]> {
     return this.fetchValue(getSkills, courseIterationId);
   }
 
+  /** GET /tease/course_phase/{id}/students — students enriched with attributes. */
   async getStudents(courseIterationId: string): Promise<Student[]> {
     return this.fetchValue(getStudents, courseIterationId);
   }
 
+  /** GET /tease/course_phase/{id}/allocations — the finalised allocations on record. */
   async getAllocations(courseIterationId: string): Promise<Allocation[]> {
     return this.fetchValue(getAllocations, courseIterationId);
   }
 
+  /** POST /tease/course_phase/{id}/allocations — legacy bulk-upsert of allocations only. */
   async postAllocations(allocations: Allocation[], courseIterationId: string): Promise<boolean> {
     const params = {
       courseIterationId: courseIterationId,
@@ -53,6 +60,7 @@ export class PromptService {
     return (await lastValueFrom(result)).ok;
   }
 
+  /** GET /tease/course-phases — all course phases visible to the current JWT. */
   async getCourseIterations(): Promise<CourseIteration[]> {
     return this.fetchValue(getCourseIterations);
   }
@@ -83,6 +91,7 @@ export class PromptService {
     return lastValueFrom(this.apiService.invoke(postSave, { coursePhaseId, body: payload }));
   }
 
+  /** Indicates whether a PROMPT JWT is present in localStorage (i.e. user is logged in). */
   isImportPossible(): boolean {
     return localStorage.getItem(GLOBALS.LS_KEY_JWT) !== null;
   }

@@ -16,6 +16,11 @@ export interface TeaseCoursePhaseCoursePhaseIdWorkspacePut$Params {
   body?: TeaseWorkspaceUpsert;
 }
 
+/**
+ * Upsert the Tease workspace draft for a course phase via
+ * `PUT /tease/course_phase/{coursePhaseId}/workspace`. Idempotent — used
+ * by the client-side autosave loop. Does not touch the allocations table.
+ */
 export function teaseCoursePhaseCoursePhaseIdWorkspacePut(
   http: HttpClient,
   rootUrl: string,

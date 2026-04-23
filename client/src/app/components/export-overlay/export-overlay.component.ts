@@ -18,6 +18,7 @@ import { WorkspaceStateService } from 'src/app/shared/services/workspace-state.s
   standalone: false,
 })
 export class ExportOverlayComponent implements OverlayComponentData {
+  /** Host-supplied data payload; provides the current allocation snapshot to the overlay. */
   public data: {
     allocationData: AllocationData;
   };
@@ -25,11 +26,15 @@ export class ExportOverlayComponent implements OverlayComponentData {
   private readonly EXPORT_DATA_TYPE = 'text/csv;charset=utf-8';
   private readonly EXPORT_PROJECT_IMAGES_NAME = 'TEASE-projects.zip';
 
+  /** Hidden DOM subtree used for rasterising project cards into PNGs. */
   @ViewChild('projectsScreen', { static: true }) projectsScreen: ElementRef;
 
+  /** Spinner flag for the project-images export. */
   isLoading = false;
+  /** Spinner flag for the "Save Teams" (POST /save) button. */
   isSavingToPrompt = false;
 
+  /** Wires the Angular dependencies for the overlay. */
   constructor(
     private allocationsService: AllocationsService,
     private projectsService: ProjectsService,
@@ -49,6 +54,11 @@ export class ExportOverlayComponent implements OverlayComponentData {
     return !!this.workspaceStateService.coursePhaseId;
   }
 
+  /**
+   * Delegate to `WorkspaceStateService.saveToPrompt()` — publishes the
+   * workspace + finalised allocations to PROMPT in a single transaction.
+   * No-op when no PROMPT course phase is hydrated (CSV-only mode).
+   */
   async saveToPrompt(): Promise<void> {
     if (!this.canSaveToPrompt) return;
     this.isSavingToPrompt = true;
@@ -59,6 +69,7 @@ export class ExportOverlayComponent implements OverlayComponentData {
     }
   }
 
+  /** Build and download the allocation CSV file (`TEASE-mappings.csv`). */
   exportCSV() {
     const allocations = this.allocationsService.getAllocations();
     const csvData = this.allocationsToCSV(allocations);
@@ -79,6 +90,10 @@ export class ExportOverlayComponent implements OverlayComponentData {
     return csvData;
   }
 
+  /**
+   * Rasterise every project card + the full team board to PNG and
+   * package them into a single zip for download.
+   */
   async exportProjectImages(): Promise<void> {
     this.isLoading = true;
 

@@ -57,6 +57,7 @@ export class WorkspaceStateService implements OnDestroy {
     }
   };
 
+  /** Registers the `beforeunload` handler; all other state is lazy. */
   constructor(
     private promptService: PromptService,
     private toastsService: ToastsService,
@@ -69,6 +70,7 @@ export class WorkspaceStateService implements OnDestroy {
     }
   }
 
+  /** Angular lifecycle — remove the beforeunload listener and tear down autosave. */
   ngOnDestroy(): void {
     if (typeof window !== 'undefined') {
       window.removeEventListener('beforeunload', this.beforeUnloadHandler);
@@ -78,30 +80,37 @@ export class WorkspaceStateService implements OnDestroy {
 
   /* --- observable state --------------------------------------------- */
 
+  /** Synchronous snapshot of the currently hydrated course phase id. */
   get coursePhaseId(): string | null {
     return this.coursePhaseIdSubject$.getValue();
   }
 
+  /** Observable of the currently hydrated course phase id. */
   get coursePhaseId$(): Observable<string | null> {
     return this.coursePhaseIdSubject$.asObservable();
   }
 
+  /** Synchronous snapshot of the unsaved-changes flag. */
   get dirty(): boolean {
     return this.dirtySubject$.getValue();
   }
 
+  /** Observable of the unsaved-changes flag. */
   get dirty$(): Observable<boolean> {
     return this.dirtySubject$.asObservable();
   }
 
+  /** Emits once hydration finishes (true) or when a new hydration starts (false). */
   get hydrated$(): Observable<boolean> {
     return this.hydratedSubject$.asObservable();
   }
 
+  /** Emits true while any save / autosave network call is in flight. */
   get saving$(): Observable<boolean> {
     return this.savingSubject$.asObservable();
   }
 
+  /** Currently selected matching algorithm (or null if none picked). */
   getAlgorithmType(): AlgorithmType | null {
     return this.algorithmType;
   }
@@ -116,6 +125,10 @@ export class WorkspaceStateService implements OnDestroy {
     return this.lastExportedAtSubject$.asObservable();
   }
 
+  /**
+   * Update the selected matching algorithm. Marks the workspace dirty
+   * so the change is captured by the next autosave.
+   */
   setAlgorithmType(algorithmType: AlgorithmType | null): void {
     if (this.algorithmType === algorithmType) return;
     this.algorithmType = algorithmType;

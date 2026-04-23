@@ -62,6 +62,7 @@ export class AppComponent implements OverlayServiceHost, OnInit, OnDestroy {
   private allocations: Allocation[];
   private constraintWrappers: ConstraintWrapper[];
 
+  /** Wires all the data service subscriptions used by the matchmaking board. */
   constructor(
     public overlayService: OverlayService,
     private componentFactoryResolver: ComponentFactoryResolver,
@@ -84,6 +85,7 @@ export class AppComponent implements OverlayServiceHost, OnInit, OnDestroy {
     this.overlayService.host = this;
   }
 
+  /** Angular lifecycle — create drag groups, subscribe to data streams, kick off entry flow. */
   ngOnInit(): void {
     this.dragulaService.createGroup('STUDENTS', {
       invalid: el => {
@@ -131,6 +133,7 @@ export class AppComponent implements OverlayServiceHost, OnInit, OnDestroy {
     this.fetchCourseIterations();
   }
 
+  /** Angular lifecycle — unsubscribe from all data streams and stop resize polling. */
   ngOnDestroy(): void {
     this.subscriptions.forEach(subscription => subscription?.unsubscribe());
     this.resizeService.cleanup();
@@ -280,7 +283,10 @@ export class AppComponent implements OverlayServiceHost, OnInit, OnDestroy {
     this.allocationsService.moveStudentToProjectAtPosition(studentId, projectId, siblingId);
   }
 
-  /* OverlayServiceHost interface */
+  /**
+   * OverlayServiceHost hook — mount the given component into the
+   * overlay host view and show the modal chrome.
+   */
   public displayComponent(component: Type<OverlayComponentData>, data: OverlayData) {
     const componentFactory = this.componentFactoryResolver.resolveComponentFactory(component);
     const viewContainerRef = this.overlayHostDirective.viewContainerRef;
@@ -290,6 +296,7 @@ export class AppComponent implements OverlayServiceHost, OnInit, OnDestroy {
     this.overlayVisible = true;
   }
 
+  /** Hide the overlay and dispose the currently mounted overlay component. */
   public closeOverlay() {
     this.overlayVisible = false;
     this.overlayHostDirective.viewContainerRef.clear();
@@ -351,6 +358,7 @@ export class AppComponent implements OverlayServiceHost, OnInit, OnDestroy {
     this.overlayService.displayComponent(ConfirmationOverlayComponent, overlayData);
   }
 
+  /** Pointer-down handler for the utility-panel resizer divider. */
   startResize(event: MouseEvent): void {
     if (!this.utilityComponent?.utilityContainerVisible) {
       return;

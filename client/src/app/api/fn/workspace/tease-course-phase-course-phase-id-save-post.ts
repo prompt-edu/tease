@@ -16,6 +16,11 @@ export interface TeaseCoursePhaseCoursePhaseIdSavePost$Params {
   body?: TeaseSaveRequest;
 }
 
+/**
+ * Publish the Tease workspace + finalised allocations to PROMPT in a single
+ * atomic transaction via `POST /tease/course_phase/{coursePhaseId}/save`.
+ * Returns the server-stamped workspace (with updated `lastExportedAt`).
+ */
 export function teaseCoursePhaseCoursePhaseIdSavePost(
   http: HttpClient,
   rootUrl: string,

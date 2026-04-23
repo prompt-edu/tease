@@ -15,6 +15,11 @@ export interface TeaseCoursePhaseCoursePhaseIdWorkspaceGet$Params {
   coursePhaseId: string;
 }
 
+/**
+ * Fetch the persisted Tease workspace for a course phase via
+ * `GET /tease/course_phase/{coursePhaseId}/workspace`. Returns an empty
+ * default workspace when the course phase has no saved state yet.
+ */
 export function teaseCoursePhaseCoursePhaseIdWorkspaceGet(
   http: HttpClient,
   rootUrl: string,

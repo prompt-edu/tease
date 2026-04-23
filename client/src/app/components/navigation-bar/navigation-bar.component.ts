@@ -72,6 +72,8 @@ export class NavigationBarComponent implements OnInit, OnChanges {
   availablePhases: CourseIteration[] = [];
   loadingPhases = false;
 
+  /** Wires the observables that drive the header UI (connection state,
+   *  save-status pill, Save Teams tooltip, autosaved-pill tooltip). */
   constructor(
     private overlayService: OverlayService,
     private allocationsService: AllocationsService,
@@ -139,6 +141,7 @@ export class NavigationBarComponent implements OnInit, OnChanges {
     return `${date.toLocaleDateString()} ${time}`;
   }
 
+  /** Angular lifecycle — compute constraint status and build the kebab menu items. */
   ngOnInit(): void {
     this.updateFulfillsAllConstraints();
 
@@ -150,28 +153,34 @@ export class NavigationBarComponent implements OnInit, OnChanges {
     ];
   }
 
+  /** Re-evaluate the constraint-fulfilment badge whenever the input data changes. */
   ngOnChanges(): void {
     this.updateFulfillsAllConstraints();
   }
 
+  /** Open the STOMP WebSocket collaboration channel for the current phase. */
   async connect(): Promise<void> {
     await this.collaborationService.connect(this.allocationData.courseIteration.id);
   }
 
+  /** Close the WebSocket collaboration channel. */
   async disconnect(): Promise<void> {
     await this.collaborationService.disconnect();
   }
 
+  /** Display the constraint-summary dialog (review and run distribution). */
   showConstraintSummaryOverlay(): void {
     this.overlayService.displayComponent(ConstraintSummaryComponent);
   }
 
+  /** Display the constraint-builder dialog (create a new constraint). */
   showConstraintBuilderOverlay(): void {
     this.overlayService.displayComponent(ConstraintBuilderOverlayComponent, {
       onClosed: () => this.overlayService.closeOverlay(),
     });
   }
 
+  /** Open the "Reset team allocation" confirmation dialog. */
   showResetConfirmation = () => {
     const overlayData = {
       title: 'Reset Team Allocation',
@@ -188,16 +197,23 @@ export class NavigationBarComponent implements OnInit, OnChanges {
     this.overlayService.displayComponent(ConfirmationOverlayComponent, overlayData);
   };
 
+  /** Open the Import overlay (CSV file + example data). */
   showImportOverlay = () => {
     this.overlayService.displayComponent(ImportOverlayComponent);
   };
 
+  /** Open the Export overlay (CSV download, project images, Save Teams). */
   showExportOverlay = () => {
     this.overlayService.displayComponent(ExportOverlayComponent, {
       allocationData: this.allocationData,
     });
   };
 
+  /**
+   * Header "Save Teams" action — publishes the current workspace +
+   * finalised allocations to PROMPT via `POST /save` in a single
+   * server-side transaction.
+   */
   saveToPrompt = async (): Promise<void> => {
     await this.workspaceStateService.saveToPrompt();
   };
@@ -217,16 +233,17 @@ export class NavigationBarComponent implements OnInit, OnChanges {
    * every time the dropdown opens so the list is fresh.
    */
   async loadAvailablePhases(): Promise<void> {
-    if (!this.promptConnectionService.isConnected()) {
-      this.availablePhases = [];
-      return;
-    }
+    // Don't gate on the synchronous `connected$` snapshot — on the
+    // `?coursePhaseId=` launch path the workspace is hydrated before the
+    // background probe completes, so an early guard here can return an
+    // empty list on the first dropdown open. `listCoursePhases(true)`
+    // already probes and falls back safely when PROMPT is unreachable.
     this.loadingPhases = true;
     try {
       const phases = await this.promptConnectionService.listCoursePhases(true);
       const currentId = this.allocationData?.courseIteration?.id;
       this.availablePhases = phases.filter(p => p.id !== currentId);
-    } catch (_err) {
+    } catch {
       this.availablePhases = [];
     } finally {
       this.loadingPhases = false;
@@ -248,6 +265,7 @@ export class NavigationBarComponent implements OnInit, OnChanges {
     this.coursePhaseSelected.emit(phase);
   }
 
+  /** Open the sort-students confirmation dialog (sorts by intro-course proficiency). */
   showSortConfirmation() {
     const overlayData = {
       title: 'Sort Students',
@@ -266,6 +284,7 @@ export class NavigationBarComponent implements OnInit, OnChanges {
     this.overlayService.displayComponent(ConfirmationOverlayComponent, overlayData);
   }
 
+  /** Open the "Delete all data" confirmation dialog (destructive, irreversible). */
   showDeleteConfirmation = () => {
     const overlayData = {
       title: 'Delete',

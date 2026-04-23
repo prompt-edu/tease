@@ -18,21 +18,33 @@ import { ToastsService } from 'src/app/shared/services/toasts.service';
   standalone: false,
 })
 export class ProjectPickerComponent implements OnInit {
+  /** Fires when the user picks a course phase; consumed by AppComponent. */
   @Output() coursePhaseSelected = new EventEmitter<CourseIteration>();
 
+  /** Course phases returned by the PROMPT probe; empty until loaded. */
   coursePhases: CourseIteration[] = [];
+  /** True while the initial (or retry) fetch is in flight. */
   isLoading = true;
+  /** True when the fetch failed; drives the retry button UI. */
   hasError = false;
 
+  /** @param promptConnectionService source of PROMPT course phases.
+   *  @param toastsService surfaces load errors to the user. */
   constructor(
     private promptConnectionService: PromptConnectionService,
     private toastsService: ToastsService
   ) {}
 
+  /** Angular lifecycle hook — kicks off the initial fetch. */
   async ngOnInit(): Promise<void> {
     await this.loadCoursePhases();
   }
 
+  /**
+   * Fetch the list of course phases from PROMPT (force-refresh the cache).
+   * Failures set `hasError = true` and surface a toast; the empty-state
+   * message lives in the template.
+   */
   async loadCoursePhases(): Promise<void> {
     this.isLoading = true;
     this.hasError = false;
@@ -51,6 +63,10 @@ export class ProjectPickerComponent implements OnInit {
     }
   }
 
+  /**
+   * Emit the chosen course phase up to `AppComponent`, which will update
+   * the URL and hydrate the workspace. No-op for a missing id.
+   */
   select(phase: CourseIteration): void {
     if (!phase?.id) return;
     this.coursePhaseSelected.emit(phase);
