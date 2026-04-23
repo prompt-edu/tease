@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, NgZone, OnDestroy, OnInit } from '@angular/core';
 import { Project } from 'src/app/api/models';
 import { OverlayComponentData, OverlayService } from 'src/app/overlay.service';
 import { ConstraintsService } from 'src/app/shared/data/constraints.service';
@@ -52,6 +52,7 @@ export class ConstraintSummaryComponent implements OverlayComponentData, OnInit,
   private subscription: Subscription;
 
   constructor(
+    private ngZone: NgZone,
     private overlayService: OverlayService,
     private constraintsService: ConstraintsService,
     private projectsService: ProjectsService,
@@ -83,7 +84,9 @@ export class ConstraintSummaryComponent implements OverlayComponentData, OnInit,
     const overlayData = {
       constraintWrapper: constraintWrapper,
       onClosed: () => {
-        this.overlayService.switchComponent(ConstraintSummaryComponent);
+        // PR note: after editing a constraint, reopen the summary overlay so the user stays on the
+        // Distribute Teams flow instead of falling back to the main page.
+        this.overlayService.displayComponent(ConstraintSummaryComponent);
       },
     };
 
@@ -110,11 +113,15 @@ export class ConstraintSummaryComponent implements OverlayComponentData, OnInit,
     );
     const allocations = await this.matchingService.getAllocations(constraints);
     if (allocations) {
-      this.allocationsService.setAllocations(
-        this.studentSortService.sortStudentsInAllocations(this.studentsService.getStudents(), allocations)
-      );
-      this.cancel();
-      this.toastsService.showToast('Distribution Complete', 'Success', true);
+      // PR note: the LP solver callback can complete outside Angular change detection.
+      // Re-enter the zone so the freshly computed allocations render immediately after one click.
+      this.ngZone.run(() => {
+        this.allocationsService.setAllocations(
+          this.studentSortService.sortStudentsInAllocations(this.studentsService.getStudents(), allocations)
+        );
+        this.cancel();
+        this.toastsService.showToast('Distribution Complete', 'Success', true);
+      });
     }
   }
 
