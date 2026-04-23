@@ -37,6 +37,9 @@ export class PromptConnectionService {
    */
   async probe(): Promise<boolean> {
     if (!this.promptService.isImportPossible()) {
+      // JWT missing/expired — drop any stale cache so `listCoursePhases`
+      // cannot return pre-logout phase data to an unauthenticated caller.
+      this.coursePhasesCache = null;
       this.connectedSubject$.next(false);
       return false;
     }
@@ -76,7 +79,9 @@ export class PromptConnectionService {
    * is available; returns `[]` when PROMPT is unreachable.
    */
   async listCoursePhases(forceRefresh: boolean = false): Promise<CourseIteration[]> {
-    if (!forceRefresh && this.coursePhasesCache) {
+    // Only serve from cache when the JWT is still present — avoids
+    // returning phase data collected before logout/token expiry.
+    if (!forceRefresh && this.promptService.isImportPossible() && this.coursePhasesCache) {
       return this.coursePhasesCache;
     }
     const ok = await this.probe();
