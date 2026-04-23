@@ -34,6 +34,10 @@ export type AlgorithmType = 'preferenceMaxLP' | 'constraintOnly';
 export class WorkspaceStateService implements OnDestroy {
   /** Debounce window (ms) for autosave after the last edit. */
   private static readonly AUTOSAVE_DEBOUNCE_MS = 2000;
+  /** Consecutive failures before surfacing a toast + "save failed" pill state. */
+  private static readonly AUTOSAVE_FAILURE_THRESHOLD = 2;
+  /** Delay before retrying autosave after a failure (independent of user edits). */
+  private static readonly AUTOSAVE_RETRY_BACKOFF_MS = 15000;
 
   private readonly coursePhaseIdSubject$ = new BehaviorSubject<string | null>(null);
   private readonly dirtySubject$ = new BehaviorSubject<boolean>(false);
@@ -54,6 +58,13 @@ export class WorkspaceStateService implements OnDestroy {
    * changes that were never actually sent.
    */
   private editCounter = 0;
+
+  /** Count of consecutive failed autosaves; resets on the next success. */
+  private consecutiveFailures = 0;
+  /** Drives the "save failed" pill state in the header. */
+  private readonly saveFailedSubject$ = new BehaviorSubject<boolean>(false);
+  /** Handle for the backoff retry timer, so we can cancel on destroy / reset. */
+  private retryTimer: ReturnType<typeof setTimeout> | null = null;
 
   /** Bound reference so the listener can be removed on destroy/HMR. */
   private readonly beforeUnloadHandler = (event: BeforeUnloadEvent): void => {
@@ -84,6 +95,7 @@ export class WorkspaceStateService implements OnDestroy {
       window.removeEventListener('beforeunload', this.beforeUnloadHandler);
     }
     this.stopAutosaveWatcher();
+    this.clearRetryTimer();
   }
 
   /* --- observable state --------------------------------------------- */
@@ -116,6 +128,17 @@ export class WorkspaceStateService implements OnDestroy {
   /** Emits true while any save / autosave network call is in flight. */
   get saving$(): Observable<boolean> {
     return this.savingSubject$.asObservable();
+  }
+
+  /**
+   * Emits true after {@link AUTOSAVE_FAILURE_THRESHOLD} consecutive
+   * autosave failures. Resets to false on the next successful save.
+   * Used by the nav-bar pill to surface a "Save failed – retrying"
+   * state so users don't assume edits are being persisted when the
+   * backend is unreachable.
+   */
+  get saveFailed$(): Observable<boolean> {
+    return this.saveFailedSubject$.asObservable();
   }
 
   /** Currently selected matching algorithm (or null if none picked). */
@@ -314,13 +337,54 @@ export class WorkspaceStateService implements OnDestroy {
         // next autosave picks up the newer state.
         this.autosaveTrigger$.next();
       }
+
+      // Success: clear the failure streak + surface a recovery toast if
+      // we had previously been signalling trouble.
+      if (this.saveFailedSubject$.getValue()) {
+        this.toastsService.showToast('Workspace is saving again.', 'Save recovered', true);
+      }
+      this.consecutiveFailures = 0;
+      this.saveFailedSubject$.next(false);
+      this.clearRetryTimer();
       return true;
     } catch (error) {
       // Keep the dirty flag so the next edit re-triggers a save attempt.
       console.warn(errorLogMessage, error);
+      this.consecutiveFailures++;
+      if (this.consecutiveFailures >= WorkspaceStateService.AUTOSAVE_FAILURE_THRESHOLD) {
+        if (!this.saveFailedSubject$.getValue()) {
+          this.saveFailedSubject$.next(true);
+          this.toastsService.showToast(
+            'Your edits are NOT being saved. Will keep retrying.',
+            'Save failed',
+            false
+          );
+        }
+        // Schedule a time-based retry so we don't rely purely on the
+        // user continuing to edit to drive reconnection attempts.
+        this.scheduleRetry();
+      }
       return false;
     } finally {
       this.savingSubject$.next(false);
+    }
+  }
+
+  /** Arm a single retry via the autosave pipeline after the backoff window. */
+  private scheduleRetry(): void {
+    this.clearRetryTimer();
+    this.retryTimer = setTimeout(() => {
+      this.retryTimer = null;
+      if (this.dirtySubject$.getValue()) {
+        this.autosaveTrigger$.next();
+      }
+    }, WorkspaceStateService.AUTOSAVE_RETRY_BACKOFF_MS);
+  }
+
+  private clearRetryTimer(): void {
+    if (this.retryTimer !== null) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = null;
     }
   }
 
@@ -366,14 +430,32 @@ export class WorkspaceStateService implements OnDestroy {
     }
   }
 
-  /** Clear all workspace state (e.g. when switching course phases). */
+  /**
+   * Clear all workspace state, including the downstream data services
+   * (constraints, locked students, allocations). Use when leaving the
+   * workspace entirely (e.g. disconnect from PROMPT or a cancelled
+   * project-switcher flow). When switching to a new course phase,
+   * prefer calling `hydrate(newId)` directly — it handles teardown
+   * internally without flashing empty state to the UI.
+   */
   reset(): void {
     this.stopAutosaveWatcher();
+    this.clearRetryTimer();
     this.coursePhaseIdSubject$.next(null);
     this.dirtySubject$.next(false);
     this.hydratedSubject$.next(false);
     this.algorithmType = null;
     this.lastSavedAtSubject$.next(null);
     this.lastExportedAtSubject$.next(null);
+    this.saveFailedSubject$.next(false);
+    this.consecutiveFailures = 0;
+    this.editCounter = 0;
+
+    // Drop the previously-hydrated workspace data so the UI doesn't
+    // keep rendering stale constraints/locks/allocations. Skip
+    // WebSocket broadcasts — the reset is local, not collaborative.
+    this.constraintsService.setConstraints([], false);
+    this.lockedStudentsService.setLocksAsArray([], false);
+    this.allocationsService.setAllocations([], false);
   }
 }

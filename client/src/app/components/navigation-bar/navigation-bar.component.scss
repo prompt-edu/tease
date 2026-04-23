@@ -113,6 +113,11 @@
   background: rgba(122, 223, 151, 0.12);
 }
 
+.save-status[data-state='error'] {
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.18);
+}
+
 .save-status-dot {
   display: inline-block;
   width: 0.55rem;
@@ -128,6 +133,10 @@
 
 .save-status-dot--unsaved {
   animation: save-blink 1.6s ease-in-out infinite;
+}
+
+.save-status-dot--error {
+  animation: save-blink 1s ease-in-out infinite;
 }
 
 // Button reset for the clickable "Unsaved changes" pill.

@@ -99,6 +99,18 @@
               <span>Saving Workspace...</span>
             </div>
           }
+          @case ('error') {
+            <button
+              type="button"
+              class="save-status save-status--clickable"
+              data-state="error"
+              (click)="flushWorkspaceNow()"
+              ngbTooltip="Autosave is failing. Click to retry now."
+              triggers="hover">
+              <span class="save-status-dot save-status-dot--error"></span>
+              <span>Save failed — retrying</span>
+            </button>
+          }
           @case ('unsaved') {
             <button
               type="button"

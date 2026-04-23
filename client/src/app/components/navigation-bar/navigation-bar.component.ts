@@ -59,8 +59,8 @@ export class NavigationBarComponent implements OnInit, OnChanges {
   readonly workspaceSaving$: Observable<boolean>;
   /** Dirty / has-unsaved-changes flag. */
   readonly workspaceDirty$: Observable<boolean>;
-  /** Three-way label for the status pill: saving | unsaved | saved. */
-  readonly saveStatusLabel$: Observable<'saving' | 'unsaved' | 'saved'>;
+  /** Four-way label for the status pill: saving | unsaved | saved | error. */
+  readonly saveStatusLabel$: Observable<'saving' | 'unsaved' | 'saved' | 'error'>;
   /** Observable PROMPT connection state (drives the project-switcher dropdown). */
   readonly promptConnected$: Observable<boolean>;
   /** Tooltip for the "Save Teams" button — last publish/export to PROMPT. */
@@ -92,8 +92,17 @@ export class NavigationBarComponent implements OnInit, OnChanges {
     this.workspaceActive$ = this.workspaceStateService.coursePhaseId$.pipe(map(id => !!id));
     this.workspaceSaving$ = this.workspaceStateService.saving$;
     this.workspaceDirty$ = this.workspaceStateService.dirty$;
-    this.saveStatusLabel$ = combineLatest([this.workspaceSaving$, this.workspaceDirty$]).pipe(
-      map(([saving, dirty]) => (saving ? 'saving' : dirty ? 'unsaved' : 'saved'))
+    this.saveStatusLabel$ = combineLatest([
+      this.workspaceSaving$,
+      this.workspaceDirty$,
+      this.workspaceStateService.saveFailed$,
+    ]).pipe(
+      map(([saving, dirty, failed]) => {
+        if (saving) return 'saving';
+        if (failed) return 'error';
+        if (dirty) return 'unsaved';
+        return 'saved';
+      })
     );
     // Either the probe marked us connected, OR we've already hydrated a
     // workspace — a workspace is only ever created after a successful
