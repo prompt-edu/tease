@@ -11,6 +11,7 @@ import { SelectData } from 'src/app/shared/matching/constraints/constraint-funct
 import { ProjectsService } from 'src/app/shared/data/projects.service';
 import { facQuestionIcon } from 'src/assets/icons/icons';
 import { ConstraintHelpComponent } from '../constraint-help/constraint-help.component';
+import { ConstraintSummaryComponent } from '../constraint-summary-view/constraint-summary.component';
 
 @Component({
   selector: 'app-constraint-builder-overlay',
@@ -88,17 +89,29 @@ export class ConstraintBuilderOverlayComponent implements OverlayComponentData, 
     this.isFormValid = true;
   }
 
-  cancel(): void {
+  cancel(event?: Event): void {
+    // PR note: stop the click here because the outer overlay container closes on any bubbled click.
+    event?.stopPropagation();
     this.data.onClosed();
   }
 
-  addConstraint(): void {
+  addConstraint(event?: Event): void {
+    // PR note: saving a constraint should not bubble to the outer overlay and close the whole
+    // Distribute Teams flow before the summary overlay is shown again.
+    event?.stopPropagation();
+
     if (!this.isFormValid) {
       return;
     }
 
     const constraint = this.createConstraintWrapper(false);
     this.constraintsService.replaceConstraint(this.id, constraint);
+
+    if (this.id) {
+      // PR note: editing should return to Constraint Summary so the Distribute Teams action stays visible.
+      this.overlayService.displayComponent(ConstraintSummaryComponent);
+      return;
+    }
 
     this.cancel();
   }
