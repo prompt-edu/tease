@@ -63,8 +63,10 @@ export class NavigationBarComponent implements OnInit, OnChanges {
   readonly saveStatusLabel$: Observable<'saving' | 'unsaved' | 'saved'>;
   /** Observable PROMPT connection state (drives the project-switcher dropdown). */
   readonly promptConnected$: Observable<boolean>;
-  /** Human-readable tooltip for the Save button ("Last saved 14:32" / "Not yet saved"). */
+  /** Tooltip for the "Save Teams" button — last publish/export to PROMPT. */
   readonly saveTooltip$: Observable<string>;
+  /** Tooltip for the "Workspace Saved" pill state — last autosave time. */
+  readonly workspaceSavedTooltip$: Observable<string>;
 
   /** Course phases available for switching (excludes the currently open one). */
   availablePhases: CourseIteration[] = [];
@@ -102,23 +104,20 @@ export class NavigationBarComponent implements OnInit, OnChanges {
       this.workspaceStateService.coursePhaseId$,
     ]).pipe(map(([connected, coursePhaseId]) => connected || !!coursePhaseId));
 
-    this.saveTooltip$ = combineLatest([
-      this.workspaceStateService.lastSavedAt$,
-      this.workspaceStateService.lastExportedAt$,
-    ]).pipe(
-      map(([lastSavedAt, lastExportedAt]) => {
-        const parts: string[] = [];
-        if (lastExportedAt) {
-          parts.push(`Last exported to PROMPT: ${this.formatTimestamp(lastExportedAt)}`);
-        }
-        if (lastSavedAt) {
-          parts.push(`Last autosave: ${this.formatTimestamp(lastSavedAt)}`);
-        }
-        if (parts.length === 0) {
-          return 'Not yet saved — click to save workspace and allocations to PROMPT';
-        }
-        return parts.join(' • ');
-      })
+    this.saveTooltip$ = this.workspaceStateService.lastExportedAt$.pipe(
+      map(lastExportedAt =>
+        lastExportedAt
+          ? `Last saved to PROMPT: ${this.formatTimestamp(lastExportedAt)}`
+          : 'Click to save teams to PROMPT'
+      )
+    );
+
+    this.workspaceSavedTooltip$ = this.workspaceStateService.lastSavedAt$.pipe(
+      map(lastSavedAt =>
+        lastSavedAt
+          ? `Last saved: ${this.formatTimestamp(lastSavedAt)}`
+          : 'Workspace is up to date'
+      )
     );
   }
 
@@ -131,7 +130,11 @@ export class NavigationBarComponent implements OnInit, OnChanges {
       date.getFullYear() === today.getFullYear() &&
       date.getMonth() === today.getMonth() &&
       date.getDate() === today.getDate();
-    const time = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    const time = date.toLocaleTimeString(undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
     if (sameDay) return `today at ${time}`;
     return `${date.toLocaleDateString()} ${time}`;
   }
@@ -197,6 +200,15 @@ export class NavigationBarComponent implements OnInit, OnChanges {
 
   saveToPrompt = async (): Promise<void> => {
     await this.workspaceStateService.saveToPrompt();
+  };
+
+  /**
+   * Triggered by clicking the "Unsaved changes" pill — forces an
+   * immediate draft save (PUT /workspace) instead of waiting for the
+   * 2 s autosave debounce.
+   */
+  flushWorkspaceNow = async (): Promise<void> => {
+    await this.workspaceStateService.saveWorkspaceNow();
   };
 
   /**

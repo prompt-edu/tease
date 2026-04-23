@@ -7,9 +7,9 @@
     <div class="d-flex flex-column gap-5">
       @if (canSaveToPrompt) {
         <div class="d-flex flex-column gap-2 align-items-start">
-          <h5 class="fw-semibold">Save to PROMPT</h5>
-          Persist the current constraints, locks, draft allocation, and finalised team
-          allocation to PROMPT in a single transaction.
+          <h5 class="fw-semibold">Save Teams</h5>
+          Publish the current team allocation to PROMPT together with the workspace draft
+          (constraints + locks) in a single transaction.
           <button
             type="button"
             class="btn btn-primary"
@@ -18,7 +18,7 @@
             <span class="pe-2" [ngClass]="{ 'visually-hidden': !isSavingToPrompt }">
               <span class="spinner-border spinner-border-sm"></span>
             </span>
-            <span>Save to PROMPT</span>
+            <span>Save Teams</span>
           </button>
         </div>
       }
@@ -43,12 +43,6 @@
         </button>
       </div>
 
-      <div class="d-flex flex-column gap-2 align-items-start">
-        <h5 class="fw-semibold">Prompt Export (legacy)</h5>
-        Export only the final allocations to PROMPT without persisting workspace state.
-        Prefer "Save to PROMPT" above.
-        <button type="button" class="btn btn-outline-secondary" (click)="exportPrompt()">Export to Prompt</button>
-      </div>
     </div>
   </div>
 </div>

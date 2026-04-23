@@ -1,9 +1,6 @@
 import { Component, ElementRef, ViewChild } from '@angular/core';
 import { OverlayComponentData } from '../../overlay.service';
 import JSZip from 'jszip';
-import { PromptService } from 'src/app/shared/services/prompt.service';
-import { ToastsService } from 'src/app/shared/services/toasts.service';
-import { HttpErrorResponse } from '@angular/common/http';
 import { AllocationsService } from 'src/app/shared/data/allocations.service';
 import { saveAs } from 'file-saver';
 import { Allocation } from 'src/app/api/models';
@@ -12,7 +9,6 @@ import { StudentsService } from 'src/app/shared/data/students.service';
 import { AllocationData } from 'src/app/shared/models/allocation-data';
 import { NgxCaptureService } from 'ngx-capture';
 import { Observable, forkJoin, map } from 'rxjs';
-import { CourseIterationsService } from 'src/app/shared/data/course-iteration.service';
 import { WorkspaceStateService } from 'src/app/shared/services/workspace-state.service';
 
 @Component({
@@ -35,12 +31,9 @@ export class ExportOverlayComponent implements OverlayComponentData {
   isSavingToPrompt = false;
 
   constructor(
-    private promptService: PromptService,
-    private toastsService: ToastsService,
     private allocationsService: AllocationsService,
     private projectsService: ProjectsService,
     private studentsService: StudentsService,
-    private courseIterationsService: CourseIterationsService,
     private captureService: NgxCaptureService,
     private workspaceStateService: WorkspaceStateService
   ) {}
@@ -63,29 +56,6 @@ export class ExportOverlayComponent implements OverlayComponentData {
       await this.workspaceStateService.saveToPrompt();
     } finally {
       this.isSavingToPrompt = false;
-    }
-  }
-
-  /**
-   * Legacy export-only path. Left intact per plan §6.7 — the underlying
-   * POST /allocations endpoint remains callable for other tools.
-   */
-  async exportPrompt() {
-    const allocations = this.allocationsService.getAllocations();
-    try {
-      const courseIteration = this.courseIterationsService.getCourseIteration();
-      if (await this.promptService.postAllocations(allocations, courseIteration?.id)) {
-        this.toastsService.showToast('Export successful', 'Export', true);
-      } else {
-        this.toastsService.showToast('Export failed', 'Export', false);
-      }
-    } catch (error) {
-      if (error instanceof HttpErrorResponse) {
-        console.log('Error while fetching data: ', error);
-        this.toastsService.showToast(`Error ${error.status}: ${error.statusText}`, 'Export failed', false);
-      } else {
-        console.log('Unknown error: ', error);
-      }
     }
   }
 

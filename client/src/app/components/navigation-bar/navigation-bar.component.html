@@ -87,38 +87,49 @@
     </div>
     <button type="button" class="btn btn-primary btn-icon-text" (click)="showConstraintSummaryOverlay()">
       <fa-icon [icon]="facGroupsIcon" class="pe-2 fs-3"></fa-icon>
-      <div>Distribute Projects</div>
+      <div>Distribute</div>
     </button>
 
     @if (workspaceActive$ | async) {
       <div class="save-cluster d-flex align-items-center gap-2">
-        <div class="save-status" [attr.data-state]="saveStatusLabel$ | async">
-          @switch (saveStatusLabel$ | async) {
-            @case ('saving') {
+        @switch (saveStatusLabel$ | async) {
+          @case ('saving') {
+            <div class="save-status" data-state="saving">
               <span class="save-status-dot save-status-dot--saving"></span>
-              <span>Saving…</span>
-            }
-            @case ('unsaved') {
+              <span>Saving Workspace...</span>
+            </div>
+          }
+          @case ('unsaved') {
+            <button
+              type="button"
+              class="save-status save-status--clickable"
+              data-state="unsaved"
+              (click)="flushWorkspaceNow()"
+              ngbTooltip="Click to save workspace now"
+              triggers="hover">
               <span class="save-status-dot save-status-dot--unsaved"></span>
               <span>Unsaved changes</span>
-            }
-            @case ('saved') {
-              <span class="save-status-dot save-status-dot--saved"></span>
-              <span>Saved</span>
-            }
+            </button>
           }
-        </div>
+          @case ('saved') {
+            <div
+              class="save-status"
+              data-state="saved"
+              [ngbTooltip]="(workspaceSavedTooltip$ | async) ?? ''"
+              triggers="hover">
+              <span class="save-status-dot save-status-dot--saved"></span>
+              <span>Workspace Saved</span>
+            </div>
+          }
+        }
         <button
           type="button"
-          class="btn btn-icon-text"
-          [class.btn-primary]="(workspaceDirty$ | async) && !(workspaceSaving$ | async)"
-          [class.btn-outline-light]="!(workspaceDirty$ | async) || (workspaceSaving$ | async)"
-          [disabled]="(workspaceSaving$ | async) || !(workspaceDirty$ | async)"
+          class="btn btn-primary btn-icon-text"
           (click)="saveToPrompt()"
           [ngbTooltip]="(saveTooltip$ | async) ?? ''"
           triggers="hover">
           <fa-icon [icon]="facExportIcon" class="pe-2 fs-3"></fa-icon>
-          <div>Save</div>
+          <div>Save Teams</div>
         </button>
       </div>
     }
@@ -128,11 +139,6 @@
         <fa-icon [icon]="facMoreIcon" class="fs-3 text-white"></fa-icon>
       </button>
       <div ngbDropdownMenu>
-        @if (workspaceActive$ | async) {
-          <button ngbDropdownItem (click)="saveToPrompt()" class="btn-icon-text py-2 text-dark">
-            <fa-icon [icon]="facExportIcon" class="pe-2 fs-3"></fa-icon>Save to PROMPT
-          </button>
-        }
         @for (item of dropdownItems; track item) {
           <button ngbDropdownItem (click)="item.action()" class="btn-icon-text py-2" [ngClass]="item.class">
             <fa-icon [icon]="item.icon" class="pe-2 fs-3"></fa-icon>{{ item.label }}

@@ -234,6 +234,29 @@ export class WorkspaceStateService implements OnDestroy {
     };
   }
 
+  /**
+   * Manually force a draft save (PUT /workspace) without waiting for
+   * the debounce. No-op when clean or when no workspace is active.
+   * Returns true on success, false otherwise.
+   */
+  async saveWorkspaceNow(): Promise<boolean> {
+    const coursePhaseId = this.coursePhaseId;
+    if (!coursePhaseId || !this.dirtySubject$.getValue()) return false;
+
+    this.savingSubject$.next(true);
+    try {
+      const saved = await this.promptService.putWorkspace(coursePhaseId, this.buildUpsertPayload());
+      this.lastSavedAtSubject$.next(saved?.lastSavedAt ?? new Date().toISOString());
+      this.dirtySubject$.next(false);
+      return true;
+    } catch (error) {
+      console.warn('Manual workspace save failed', error);
+      return false;
+    } finally {
+      this.savingSubject$.next(false);
+    }
+  }
+
   private async autosave(): Promise<void> {
     const coursePhaseId = this.coursePhaseId;
     if (!coursePhaseId || !this.dirtySubject$.getValue()) return;
