@@ -198,18 +198,22 @@ export class AppComponent implements OverlayServiceHost, OnInit, OnDestroy {
       this.projectsService.setProjects(projects ?? []);
       this.skillsService.setSkills(skills ?? []);
 
-      // Fetch & apply the persisted workspace (constraints, locks,
-      // draft allocations, algorithm type).
-      await this.workspaceStateService.hydrate(coursePhaseId);
-
       // Mirror the selected course phase into the existing
-      // CourseIterationsService so the rest of the app (navigation bar,
-      // websocket collaboration, etc.) keeps working unchanged.
+      // CourseIterationsService *before* hydrating workspace state — the
+      // constraints/locks/allocations services route WebSocket updates
+      // through CourseIterationsService.getCourseIteration(), so if the
+      // course phase is set afterwards, hydration emissions during a
+      // phase switch would be attributed to the previously-selected
+      // phase id.
       const courseIteration: CourseIteration = {
         id: coursePhaseId,
         semesterName: this.resolveSemesterName(coursePhaseId),
       };
       this.courseIterationsService.setCourseIteration(courseIteration);
+
+      // Fetch & apply the persisted workspace (constraints, locks,
+      // draft allocations, algorithm type).
+      await this.workspaceStateService.hydrate(coursePhaseId);
 
       try {
         await this.collaborationService.connect(coursePhaseId);
