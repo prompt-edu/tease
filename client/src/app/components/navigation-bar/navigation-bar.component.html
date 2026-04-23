@@ -7,7 +7,7 @@
         {{ allocationData.courseIteration.semesterName }}
       </div>
 
-      @if (websocketService.connection?.connected) {
+      @if (websocketService.connected$ | async) {
         <fa-icon
           [icon]="facCheckIcon"
           class="collaboration-indicator success"
