@@ -1,0 +1,131 @@
+@import '/src/scss/style-constants.scss';
+
+.global-search {
+  position: relative;
+  width: 22rem;
+  max-width: 28rem;
+}
+
+.global-search__input-wrapper {
+  position: relative;
+}
+
+.global-search__input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #fff;
+  padding-right: 2rem;
+
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.55);
+  }
+
+  &:focus {
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.35);
+    color: #fff;
+    box-shadow: none;
+  }
+}
+
+.global-search__clear {
+  position: absolute;
+  top: 50%;
+  right: 0.45rem;
+  transform: translateY(-50%);
+  width: 1.4rem;
+  height: 1.4rem;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1.1rem;
+  line-height: 1;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+  }
+}
+
+.global-search__menu {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  right: 0;
+  background: #fff;
+  color: #1f1f1f;
+  border-radius: 0.5rem;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+  max-height: 24rem;
+  overflow-y: auto;
+  z-index: 1050;
+  padding: 0.25rem 0;
+}
+
+.global-search__empty {
+  padding: 0.85rem 1rem;
+  color: rgba(0, 0, 0, 0.55);
+  font-size: 0.9rem;
+}
+
+.global-search__result {
+  width: 100%;
+  background: transparent;
+  border: none;
+  text-align: left;
+  padding: 0.55rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  color: inherit;
+  cursor: pointer;
+
+  &:hover,
+  &--focused {
+    background: rgba(0, 0, 0, 0.05);
+  }
+}
+
+.global-search__result-primary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.global-search__result-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.global-search__result-badge {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.08);
+  color: rgba(0, 0, 0, 0.65);
+  white-space: nowrap;
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.global-search__result-secondary {
+  font-size: 0.78rem;
+  color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.global-search__result-team--unallocated {
+  font-style: italic;
+  color: rgba(0, 0, 0, 0.45);
+}

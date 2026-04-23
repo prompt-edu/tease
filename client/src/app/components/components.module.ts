@@ -25,6 +25,7 @@ import { ConstraintBuilderNationalityComponent } from './constraint-builder-nati
 import { SelectComponent } from './select/select.component';
 import { ConstraintHelpComponent } from './constraint-help/constraint-help.component';
 import { ProjectPickerComponent } from './project-picker/project-picker.component';
+import { GlobalSearchComponent } from './global-search/global-search.component';
 
 @NgModule({
   declarations: [
@@ -45,6 +46,7 @@ import { ProjectPickerComponent } from './project-picker/project-picker.componen
     SelectComponent,
     ConstraintHelpComponent,
     ProjectPickerComponent,
+    GlobalSearchComponent,
   ],
   exports: [
     NavigationBarComponent,
