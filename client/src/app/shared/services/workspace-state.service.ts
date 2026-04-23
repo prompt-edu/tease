@@ -47,6 +47,14 @@ export class WorkspaceStateService implements OnDestroy {
   private autosaveSub: Subscription | null = null;
   private autosaveTrigger$ = new Subject<void>();
 
+  /**
+   * Monotonic counter bumped on every edit. Used by autosave /
+   * saveWorkspaceNow to detect whether the user made further edits
+   * while a PUT was in flight, so we don't clear the dirty flag for
+   * changes that were never actually sent.
+   */
+  private editCounter = 0;
+
   /** Bound reference so the listener can be removed on destroy/HMR. */
   private readonly beforeUnloadHandler = (event: BeforeUnloadEvent): void => {
     if (this.dirtySubject$.getValue()) {
@@ -193,6 +201,7 @@ export class WorkspaceStateService implements OnDestroy {
   /** Mark the workspace as having unsaved changes and schedule autosave. */
   markDirty(): void {
     if (!this.coursePhaseId) return;
+    this.editCounter++;
     if (!this.dirtySubject$.getValue()) {
       this.dirtySubject$.next(true);
     }
@@ -249,46 +258,67 @@ export class WorkspaceStateService implements OnDestroy {
 
   /**
    * Manually force a draft save (PUT /workspace) without waiting for
-   * the debounce. No-op when clean or when no workspace is active.
+   * the debounce. No-op when clean, when no workspace is active, or
+   * when another save is already in flight (in which case an autosave
+   * is scheduled so the latest edits are not lost).
    * Returns true on success, false otherwise.
    */
   async saveWorkspaceNow(): Promise<boolean> {
-    const coursePhaseId = this.coursePhaseId;
-    if (!coursePhaseId || !this.dirtySubject$.getValue()) return false;
-
-    this.savingSubject$.next(true);
-    try {
-      const saved = await this.promptService.putWorkspace(coursePhaseId, this.buildUpsertPayload());
-      this.lastSavedAtSubject$.next(saved?.lastSavedAt ?? new Date().toISOString());
-      this.dirtySubject$.next(false);
-      return true;
-    } catch (error) {
-      console.warn('Manual workspace save failed', error);
+    if (!this.coursePhaseId || !this.dirtySubject$.getValue()) return false;
+    if (this.savingSubject$.getValue()) {
+      // A save is already running — let it finish; the dirty flag will
+      // drive the follow-up autosave.
+      this.autosaveTrigger$.next();
       return false;
-    } finally {
-      this.savingSubject$.next(false);
     }
+    return this.runPutWorkspace('Manual workspace save failed');
   }
 
   private async autosave(): Promise<void> {
+    if (!this.coursePhaseId || !this.dirtySubject$.getValue()) return;
+    if (this.savingSubject$.getValue()) {
+      // Another save is in flight — re-arm the debounce so the current
+      // edits still get persisted after it completes.
+      this.autosaveTrigger$.next();
+      return;
+    }
+    await this.runPutWorkspace('Autosave to PROMPT failed');
+  }
+
+  /**
+   * Shared draft-save implementation for both autosave and manual save.
+   * Captures the edit counter before the PUT; if `markDirty` is called
+   * mid-flight the dirty flag is preserved and another save is
+   * scheduled so no edits are lost. Guarded by the caller against
+   * concurrent invocations.
+   */
+  private async runPutWorkspace(errorLogMessage: string): Promise<boolean> {
     const coursePhaseId = this.coursePhaseId;
-    if (!coursePhaseId || !this.dirtySubject$.getValue()) return;
+    if (!coursePhaseId) return false;
+
+    const snapshotEdits = this.editCounter;
+    const payload = this.buildUpsertPayload();
 
     this.savingSubject$.next(true);
     try {
-      const saved = await this.promptService.putWorkspace(coursePhaseId, this.buildUpsertPayload());
-      if (saved?.lastSavedAt) {
-        this.lastSavedAtSubject$.next(saved.lastSavedAt);
+      const saved = await this.promptService.putWorkspace(coursePhaseId, payload);
+      this.lastSavedAtSubject$.next(saved?.lastSavedAt ?? new Date().toISOString());
+
+      if (this.editCounter === snapshotEdits) {
+        // No edits arrived while the PUT was in flight → workspace is
+        // truly clean now.
+        this.dirtySubject$.next(false);
       } else {
-        // Server returned nothing — use client-side time as a best-effort fallback
-        this.lastSavedAtSubject$.next(new Date().toISOString());
+        // User kept editing while we were saving — the payload we just
+        // sent is stale. Keep dirty=true and re-arm the debounce so the
+        // next autosave picks up the newer state.
+        this.autosaveTrigger$.next();
       }
-      this.dirtySubject$.next(false);
+      return true;
     } catch (error) {
-      // Autosave failures should not be noisy — the user still has their
-      // local edits. Log and keep the dirty flag so we retry on the next
-      // change.
-      console.warn('Autosave to PROMPT failed', error);
+      // Keep the dirty flag so the next edit re-triggers a save attempt.
+      console.warn(errorLogMessage, error);
+      return false;
     } finally {
       this.savingSubject$.next(false);
     }
