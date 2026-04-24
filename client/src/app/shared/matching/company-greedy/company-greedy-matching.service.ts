@@ -193,7 +193,7 @@ export class CompanyGreedyMatchingService {
   ): boolean {
     return (
       this.canAssignStudentToProject(student, project, allocation, assignedStudentIds, constraintWrappers) &&
-      student.registeredBefore === true
+      (this.matchesProjectTypeInterest(student, project) || student.registeredBefore === true)
     );
   }
 
@@ -206,7 +206,7 @@ export class CompanyGreedyMatchingService {
   ): boolean {
     return (
       this.canAssignStudentToProject(student, project, allocation, assignedStudentIds, constraintWrappers) &&
-      student.registeredBefore !== true
+      !(this.matchesProjectTypeInterest(student, project) || student.registeredBefore === true)
     );
   }
 

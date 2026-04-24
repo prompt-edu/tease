@@ -34,8 +34,8 @@ export class MatchingRouterService {
   async getAllocations(input: MatchingRouterInput): Promise<Allocation[]> {
     if (this.getMatchingMode(input) === 'company-greedy') {
       return this.companyGreedyMatchingService.getAllocations({
-        students: input.students as CompanyGreedyStudent[],
-        projects: input.projects as CompanyGreedyProject[],
+        students: this.mapToCompanyGreedyStudents(input.students),
+        projects: this.mapToCompanyGreedyProjects(input.projects),
         constraintWrappers: input.constraintWrappers,
         locks: input.locks,
         activeSemester: input.courseIteration?.semesterName,
@@ -67,13 +67,38 @@ export class MatchingRouterService {
   }
 
   private normalizeMatchingMode(matchingMode?: CourseIterationWithMatchingMode['matchingMode']): MatchingMode | null {
-    if (matchingMode === 'company-greedy' || matchingMode === 'COMPANY_GREEDY') {
+    const normalizedMatchingMode = matchingMode
+      ?.trim()
+      .toLowerCase()
+      .replace(/[_\s]+/g, '-');
+
+    if (normalizedMatchingMode === 'company-greedy') {
       return 'company-greedy';
     }
-    if (matchingMode === 'ranked-project-preferences' || matchingMode === 'RANKED_PROJECT_PREFERENCES') {
+    if (normalizedMatchingMode === 'ranked-project-preferences') {
       return 'ranked-project-preferences';
     }
     return null;
+  }
+
+  private mapToCompanyGreedyStudents(students: Student[]): CompanyGreedyStudent[] {
+    return students.map(student => ({
+      ...student,
+      preferredProjectTypes: (student as CompanyGreedyStudent).preferredProjectTypes,
+      registeredBefore: (student as CompanyGreedyStudent).registeredBefore,
+      previousParticipation: (student as CompanyGreedyStudent).previousParticipation,
+      blacklisted: (student as CompanyGreedyStudent).blacklisted,
+      registeredIn: (student as CompanyGreedyStudent).registeredIn,
+    }));
+  }
+
+  private mapToCompanyGreedyProjects(projects: Project[]): CompanyGreedyProject[] {
+    return projects.map(project => ({
+      ...project,
+      projectType: (project as CompanyGreedyProject).projectType,
+      preferredStudyPrograms: (project as CompanyGreedyProject).preferredStudyPrograms,
+      capacity: (project as CompanyGreedyProject).capacity,
+    }));
   }
 
   private hasCompanyGreedyData(students: Student[], projects: Project[]): boolean {

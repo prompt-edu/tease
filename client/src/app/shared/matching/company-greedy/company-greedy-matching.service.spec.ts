@@ -66,6 +66,40 @@ describe('CompanyGreedyMatchingService', () => {
     expect(allocations.find(allocation => allocation.projectId === 'project-1')?.students).not.toContain('locked');
   });
 
+  it('ignores a locked assignment that violates an active nationality constraint and keeps the student assignable elsewhere', () => {
+    const allocations = service.getAllocations(
+      createInput({
+        students: [createStudent('locked-student', { nationality: 'DE' }), createStudent('other-student')],
+        projects: [createProject('restricted-project'), createProject('open-project')],
+        constraintWrappers: [createNationalityConstraint('restricted-project', ['locked-student'])],
+        locks: new Map([['locked-student', 'restricted-project']]),
+      })
+    );
+
+    expect(allocations.find(allocation => allocation.projectId === 'restricted-project')?.students).not.toContain(
+      'locked-student'
+    );
+    expect(allocations.find(allocation => allocation.projectId === 'open-project')?.students).toContain(
+      'locked-student'
+    );
+  });
+
+  it('applies only the first lock when multiple locks exceed project capacity', () => {
+    const allocations = service.getAllocations(
+      createInput({
+        students: [createStudent('student-1'), createStudent('student-2')],
+        projects: [createProject('project-1', { capacity: 1 }), createProject('project-2', { capacity: 1 })],
+        locks: new Map([
+          ['student-1', 'project-1'],
+          ['student-2', 'project-1'],
+        ]),
+      })
+    );
+
+    expect(allocations.find(allocation => allocation.projectId === 'project-1')?.students).toEqual(['student-1']);
+    expect(allocations.find(allocation => allocation.projectId === 'project-1')?.students).not.toContain('student-2');
+  });
+
   it('does not assign the same student twice', () => {
     const allocations = service.getAllocations(
       createInput({
@@ -125,6 +159,20 @@ describe('CompanyGreedyMatchingService', () => {
     expect(allocations[0].students).toEqual(['perfect']);
   });
 
+  it('treats project-type interest as qualified when registeredBefore is false', () => {
+    const allocations = service.getAllocations(
+      createInput({
+        students: [
+          createStudent('type-match', { preferredProjectTypes: ['IT'], registeredBefore: false }),
+          createStudent('registered-before', { preferredProjectTypes: ['Finance'], registeredBefore: true }),
+        ],
+        projects: [createProject('project-1', { capacity: 1, projectType: 'IT' })],
+      })
+    );
+
+    expect(allocations[0].students).toEqual(['type-match']);
+  });
+
   it('performs a fair first round before filling remaining capacity', () => {
     const allocations = service.getAllocations(
       createInput({
@@ -135,6 +183,17 @@ describe('CompanyGreedyMatchingService', () => {
 
     expect(allocations.find(allocation => allocation.projectId === 'project-1')?.students.length).toEqual(2);
     expect(allocations.find(allocation => allocation.projectId === 'project-2')?.students.length).toEqual(1);
+  });
+
+  it('returns an empty allocation list when no projects are provided', () => {
+    const allocations = service.getAllocations(
+      createInput({
+        students: [createStudent('student-1')],
+        projects: [],
+      })
+    );
+
+    expect(allocations).toEqual([]);
   });
 });
 

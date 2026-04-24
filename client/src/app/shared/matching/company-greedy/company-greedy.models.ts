@@ -21,7 +21,7 @@ export interface CompanyGreedyMatchingInput {
   projects: CompanyGreedyProject[];
   constraintWrappers: ConstraintWrapper[];
   locks: StudentIdToProjectIdMapping;
-  activeSemester: string;
+  activeSemester?: string;
 }
 
 export type CompanyGreedyMatchingResult = Allocation[];
