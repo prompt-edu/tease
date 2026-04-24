@@ -1,24 +1,58 @@
 @import '/src/scss/style-constants.scss';
 
-.collaboration-indicator {
-  font-size: 1.65rem;
-}
-
-.collaboration-indicator.success {
-  color: green;
-}
-
-.collaboration-indicator.error {
-  color: $warn;
-}
-
-.collaboration-indicator:hover.error {
-  color: $primary;
-}
-
 .wh-4 {
   width: 2rem;
   height: 2rem;
+}
+
+// --- Project meta cluster (project name + collab + workspace pill) -------
+
+.project-meta {
+  // Sub-row sits flush under the semester name; small text so it reads
+  // as metadata, not as a primary action.
+  line-height: 1;
+}
+
+.project-meta__row {
+  // Tighter so the pills feel attached to the project label rather
+  // than floating in their own row.
+  margin-top: 0.05rem;
+}
+
+// --- Collaboration "Live / Offline" pill ---------------------------------
+
+.collab-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.1rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  line-height: 1.1;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: filter 0.15s ease;
+}
+
+.collab-pill__icon {
+  font-size: 0.85rem;
+}
+
+.collab-pill--connected {
+  color: #7adf97;
+  background: rgba(122, 223, 151, 0.12);
+}
+
+.collab-pill--disconnected {
+  color: #ff9f7a;
+  background: rgba(255, 159, 122, 0.14);
+}
+
+.collab-pill:hover,
+.collab-pill:focus {
+  filter: brightness(1.15);
+  outline: none;
 }
 
 // --- Project-switcher dropdown ------------------------------------------
@@ -79,20 +113,16 @@
   font-style: italic;
 }
 
-// --- Save-to-PROMPT status cluster ---------------------------------------
-
-.save-cluster {
-  border-left: 1px solid rgba(255, 255, 255, 0.15);
-  padding-left: 0.75rem;
-}
+// --- Workspace save-status pill (sits in the project-meta row) -----------
 
 .save-status {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.25rem 0.75rem;
+  padding: 0.1rem 0.6rem;
   border-radius: 999px;
-  font-size: 0.85rem;
+  font-size: 0.72rem;
+  line-height: 1.1;
   color: rgba(255, 255, 255, 0.85);
   background: rgba(255, 255, 255, 0.08);
   white-space: nowrap;
@@ -139,10 +169,16 @@
   animation: save-blink 1s ease-in-out infinite;
 }
 
-// Button reset for the clickable "Unsaved changes" pill.
+// Button reset for the clickable "Unsaved changes" / "Save failed"
+// pills — `font: inherit` would pull the parent body font-size back in
+// and visibly enlarge the pill, so re-assert the compact size + padding
+// explicitly here.
 button.save-status {
   border: none;
-  font: inherit;
+  font-family: inherit;
+  font-size: 0.72rem;
+  line-height: 1.1;
+  padding: 0.1rem 0.6rem;
   cursor: pointer;
 }
 
