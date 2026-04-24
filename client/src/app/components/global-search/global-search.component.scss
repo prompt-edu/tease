@@ -2,8 +2,18 @@
 
 .global-search {
   position: relative;
-  width: 22rem;
-  max-width: 28rem;
+  // Compact resting width so the header keeps room for the action
+  // cluster on standard 1366–1920 viewports. Expands on focus so the
+  // user gets more real estate while typing without permanently
+  // pushing the other controls onto a new flex line.
+  width: 14rem;
+  max-width: 18rem;
+  transition: width 0.18s ease;
+
+  &:focus-within {
+    width: 20rem;
+    max-width: 22rem;
+  }
 }
 
 .global-search__input-wrapper {
