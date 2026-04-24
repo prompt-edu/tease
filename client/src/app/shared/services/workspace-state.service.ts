@@ -199,6 +199,14 @@ export class WorkspaceStateService implements OnDestroy {
       }
     }
 
+    // User switched workspaces (or reset) while GET /workspace was in
+    // flight — drop this stale response instead of overwriting the newer
+    // state. Mirrors the snapshot-and-compare guard used by
+    // runPutWorkspace and saveToPrompt.
+    if (this.coursePhaseId !== coursePhaseId) {
+      return;
+    }
+
     // Empty / missing workspace → blank editor, no error.
     const constraints = workspace?.constraints ?? [];
     const locks = workspace?.lockedStudents ?? [];

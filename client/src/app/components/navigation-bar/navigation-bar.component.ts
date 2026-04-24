@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnChanges, OnInit, Output } from '@angular/core';
+import { Component, Input, OnChanges, OnInit } from '@angular/core';
 import { OverlayService } from 'src/app/overlay.service';
 import { ConfirmationOverlayComponent } from '../confirmation-overlay/confirmation-overlay.component';
 import { ExportOverlayComponent } from '../export-overlay/export-overlay.component';
@@ -19,9 +19,7 @@ import { WebsocketService } from 'src/app/shared/network/websocket.service';
 import { CollaborationService } from 'src/app/shared/services/collaboration.service';
 import { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { WorkspaceStateService } from 'src/app/shared/services/workspace-state.service';
-import { PromptConnectionService } from 'src/app/shared/services/prompt-connection.service';
 import { Observable, combineLatest, map } from 'rxjs';
-import { CourseIteration } from 'src/app/api/models';
 
 @Component({
   selector: 'app-navigation-bar',
@@ -46,9 +44,6 @@ export class NavigationBarComponent implements OnInit, OnChanges {
 
   @Input({ required: true }) allocationData: AllocationData;
 
-  /** Emits a course-phase selection from the project-switcher dropdown in the header. */
-  @Output() coursePhaseSelected = new EventEmitter<CourseIteration>();
-
   dropdownItems: { action: () => void; icon: IconDefinition; label: string; class: string }[];
 
   fulfillsAllConstraints = true;
@@ -61,19 +56,13 @@ export class NavigationBarComponent implements OnInit, OnChanges {
   readonly workspaceDirty$: Observable<boolean>;
   /** Four-way label for the status pill: saving | unsaved | saved | error. */
   readonly saveStatusLabel$: Observable<'saving' | 'unsaved' | 'saved' | 'error'>;
-  /** Observable PROMPT connection state (drives the project-switcher dropdown). */
-  readonly promptConnected$: Observable<boolean>;
   /** Tooltip for the "Save Teams" button — last publish/export to PROMPT. */
   readonly saveTooltip$: Observable<string>;
   /** Tooltip for the "Workspace Saved" pill state — last autosave time. */
   readonly workspaceSavedTooltip$: Observable<string>;
 
-  /** Course phases available for switching (excludes the currently open one). */
-  availablePhases: CourseIteration[] = [];
-  loadingPhases = false;
-
-  /** Wires the observables that drive the header UI (connection state,
-   *  save-status pill, Save Teams tooltip, autosaved-pill tooltip). */
+  /** Wires the observables that drive the header UI (save-status pill,
+   *  Save Teams tooltip, autosaved-pill tooltip). */
   constructor(
     private overlayService: OverlayService,
     private allocationsService: AllocationsService,
@@ -86,8 +75,7 @@ export class NavigationBarComponent implements OnInit, OnChanges {
     private courseIterationsService: CourseIterationsService,
     private collaborationService: CollaborationService,
     public websocketService: WebsocketService,
-    private workspaceStateService: WorkspaceStateService,
-    private promptConnectionService: PromptConnectionService
+    private workspaceStateService: WorkspaceStateService
   ) {
     this.workspaceActive$ = this.workspaceStateService.coursePhaseId$.pipe(map(id => !!id));
     this.workspaceSaving$ = this.workspaceStateService.saving$;
@@ -104,17 +92,6 @@ export class NavigationBarComponent implements OnInit, OnChanges {
         return 'saved';
       })
     );
-    // Either the probe marked us connected, OR we've already hydrated a
-    // workspace — a workspace is only ever created after a successful
-    // PROMPT fetch, so `coursePhaseId != null` is itself proof of
-    // connectivity. This makes the header dropdown robust on the
-    // query-param launch path, where the probe may not have completed
-    // by the time the nav bar mounts.
-    this.promptConnected$ = combineLatest([
-      this.promptConnectionService.connected$,
-      this.workspaceStateService.coursePhaseId$,
-    ]).pipe(map(([connected, coursePhaseId]) => connected || !!coursePhaseId));
-
     this.saveTooltip$ = this.workspaceStateService.lastExportedAt$.pipe(
       map(lastExportedAt =>
         lastExportedAt
@@ -235,44 +212,6 @@ export class NavigationBarComponent implements OnInit, OnChanges {
   flushWorkspaceNow = async (): Promise<void> => {
     await this.workspaceStateService.saveWorkspaceNow();
   };
-
-  /**
-   * Populate the project-switcher dropdown with the other course phases
-   * available on PROMPT. Excludes the currently open phase. Re-fetches
-   * every time the dropdown opens so the list is fresh.
-   */
-  async loadAvailablePhases(): Promise<void> {
-    // Don't gate on the synchronous `connected$` snapshot — on the
-    // `?coursePhaseId=` launch path the workspace is hydrated before the
-    // background probe completes, so an early guard here can return an
-    // empty list on the first dropdown open. `listCoursePhases(true)`
-    // already probes and falls back safely when PROMPT is unreachable.
-    this.loadingPhases = true;
-    try {
-      const phases = await this.promptConnectionService.listCoursePhases(true);
-      const currentId = this.allocationData?.courseIteration?.id;
-      this.availablePhases = phases.filter(p => p.id !== currentId);
-    } catch {
-      this.availablePhases = [];
-    } finally {
-      this.loadingPhases = false;
-    }
-  }
-
-  /**
-   * Switch to a different course phase. Warns when there are unsaved
-   * changes; the autosave (2 s debounce) may not have fired yet.
-   */
-  async switchCoursePhase(phase: CourseIteration): Promise<void> {
-    if (!phase?.id) return;
-    if (this.workspaceStateService.dirty) {
-      const proceed = window.confirm(
-        'You have unsaved changes in the current workspace. Switch projects anyway? Unsaved edits may be lost.'
-      );
-      if (!proceed) return;
-    }
-    this.coursePhaseSelected.emit(phase);
-  }
 
   /** Open the sort-students confirmation dialog (sorts by intro-course proficiency). */
   showSortConfirmation() {
