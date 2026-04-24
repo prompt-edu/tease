@@ -8,7 +8,7 @@ import { StompSubscription } from '@stomp/stompjs';
 import { ConfirmationOverlayComponent } from 'src/app/components/confirmation-overlay/confirmation-overlay.component';
 import { GLOBALS } from '../utils/constants';
 import { ToastsService } from './toasts.service';
-import { Subscription, distinctUntilChanged, pairwise, startWith } from 'rxjs';
+import { Subscription, distinctUntilChanged } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -20,6 +20,8 @@ export class CollaborationService implements OnDestroy {
   private connectionWatchSub: Subscription | null = null;
   /** Course iteration we last subscribed to — needed to re-subscribe on reconnect. */
   private activeCourseIterationId: string | null = null;
+  /** Previous value seen by the connection watcher; undefined until the first emission. */
+  private lastSeenConnected: boolean | undefined = undefined;
 
   constructor(
     private websocketService: WebsocketService,
@@ -81,9 +83,17 @@ export class CollaborationService implements OnDestroy {
    */
   private startConnectionWatch(): void {
     if (this.connectionWatchSub) return;
+    // Anchor on the actual current value of the BehaviorSubject so the
+    // initial seed replay does not look like a transition. Avoids
+    // `startWith(true)`'s implicit assumption that we were previously
+    // connected (which gave a spurious "offline" toast on cold start).
+    this.lastSeenConnected = this.websocketService.isConnected;
     this.connectionWatchSub = this.websocketService.connected$
-      .pipe(distinctUntilChanged(), startWith(true), pairwise())
-      .subscribe(([prev, curr]) => {
+      .pipe(distinctUntilChanged())
+      .subscribe(curr => {
+        const prev = this.lastSeenConnected;
+        this.lastSeenConnected = curr;
+        if (prev === undefined || prev === curr) return;
         if (prev && !curr) {
           this.toatsService.showToast(
             'Lost connection to collaboration. Edits may not sync until reconnected.',
@@ -91,22 +101,29 @@ export class CollaborationService implements OnDestroy {
             false
           );
         } else if (!prev && curr && this.activeCourseIterationId) {
-          // Auto-reconnect succeeded — rebind the subscriptions because the
-          // STOMP CompatClient does not preserve them across reconnects.
+          // Auto-reconnect succeeded — rebind via the full connect() flow
+          // (discover + diff overlay) so a peer's newer state can never
+          // be silently overwritten by our offline-collected local edits.
           void this.rebindAfterReconnect(this.activeCourseIterationId);
         }
       });
   }
 
-  /** Rebuild topic subscriptions and push our current state after a reconnect. */
+  /**
+   * Reconnect rebind. Routes through the same `connect()` flow used on
+   * cold start so the discovery handshake + diff overlay run again —
+   * without that, any local edits made while offline would silently
+   * clobber a peer's newer state because the topic broadcasts that
+   * `subscribeToX` does on (re-)subscribe push the FULL local snapshot
+   * to the server.
+   */
   private async rebindAfterReconnect(courseIterationId: string): Promise<void> {
     for (const sub of this.subscriptions) sub.unsubscribe();
     this.subscriptions = [];
+    this.discoverySubscription?.unsubscribe();
+    this.discoverySubscription = undefined;
     try {
-      await this.subscribeToAllocations(courseIterationId);
-      await this.subscribeToLockedStudents(courseIterationId);
-      await this.subscribeToConstraints(courseIterationId);
-      this.toatsService.showToast('Reconnected to collaboration.', 'Collaboration', true);
+      await this.connect(courseIterationId);
     } catch {
       this.toatsService.showToast(
         'Could not re-subscribe after reconnect. Please reconnect manually.',
@@ -169,6 +186,7 @@ export class CollaborationService implements OnDestroy {
     this.subscriptions = [];
     this.connectionWatchSub?.unsubscribe();
     this.connectionWatchSub = null;
+    this.lastSeenConnected = undefined;
     this.activeCourseIterationId = null;
 
     this.websocketService.connection?.disconnect();
