@@ -316,15 +316,23 @@ export class WorkspaceStateService implements OnDestroy {
    * concurrent invocations.
    */
   private async runPutWorkspace(errorLogMessage: string): Promise<boolean> {
-    const coursePhaseId = this.coursePhaseId;
-    if (!coursePhaseId) return false;
+    const snapshotCoursePhaseId = this.coursePhaseId;
+    if (!snapshotCoursePhaseId) return false;
 
     const snapshotEdits = this.editCounter;
     const payload = this.buildUpsertPayload();
 
     this.savingSubject$.next(true);
     try {
-      const saved = await this.promptService.putWorkspace(coursePhaseId, payload);
+      const saved = await this.promptService.putWorkspace(snapshotCoursePhaseId, payload);
+
+      // Bail out of UI mutations if the user has switched workspaces
+      // mid-flight — the response no longer corresponds to the
+      // currently-displayed phase.
+      if (this.coursePhaseId !== snapshotCoursePhaseId) {
+        return true;
+      }
+
       this.lastSavedAtSubject$.next(saved?.lastSavedAt ?? new Date().toISOString());
 
       if (this.editCounter === snapshotEdits) {
@@ -390,16 +398,30 @@ export class WorkspaceStateService implements OnDestroy {
 
   /**
    * Explicit "Save to PROMPT" — POST /save. Persists workspace + the
-   * finalised allocations in a single server-side transaction. Returns
-   * `true` on success, `false` otherwise (toast already surfaced).
+   * finalised allocations in a single server-side transaction.
+   *
+   * Mirrors the snapshot-and-compare + in-flight guard used by
+   * runPutWorkspace so the explicit-publish path can't:
+   *  - clobber state for a workspace the user has switched away from,
+   *  - swallow edits that arrive during the in-flight POST,
+   *  - or run two POSTs in parallel and flicker savingSubject$.
+   *
+   * Returns `true` on success, `false` otherwise (toast already surfaced).
    */
   async saveToPrompt(): Promise<boolean> {
-    const coursePhaseId = this.coursePhaseId;
-    if (!coursePhaseId) {
+    const snapshotCoursePhaseId = this.coursePhaseId;
+    if (!snapshotCoursePhaseId) {
       this.toastsService.showToast('No course phase selected', 'Save failed', false);
       return false;
     }
+    if (this.savingSubject$.getValue()) {
+      // Another save is already running. Re-arm autosave so the latest
+      // edits eventually get through, but don't fire a second POST.
+      this.autosaveTrigger$.next();
+      return false;
+    }
 
+    const snapshotEdits = this.editCounter;
     const payload: TeaseSaveRequest = {
       ...this.buildUpsertPayload(),
       allocations: this.allocationsService.getAllocations(),
@@ -407,11 +429,38 @@ export class WorkspaceStateService implements OnDestroy {
 
     this.savingSubject$.next(true);
     try {
-      const saved = await this.promptService.postSave(coursePhaseId, payload);
+      const saved = await this.promptService.postSave(snapshotCoursePhaseId, payload);
+
+      // Bail out of state mutations if the user has switched workspaces
+      // while we were waiting on the server — the response is no longer
+      // about the currently-displayed phase.
+      if (this.coursePhaseId !== snapshotCoursePhaseId) {
+        return true;
+      }
+
       const now = new Date().toISOString();
       this.lastSavedAtSubject$.next(saved?.lastSavedAt ?? now);
       this.lastExportedAtSubject$.next(saved?.lastExportedAt ?? now);
-      this.dirtySubject$.next(false);
+
+      if (this.editCounter === snapshotEdits) {
+        // No edits arrived during the POST — the workspace is truly clean.
+        this.dirtySubject$.next(false);
+      } else {
+        // User kept editing while we were saving — those edits weren't
+        // in the payload. Keep dirty=true and re-arm autosave so the
+        // newer state is persisted on the next debounce.
+        this.autosaveTrigger$.next();
+      }
+
+      // Treat an explicit save as a recovery signal for the failure-streak
+      // counter, same as runPutWorkspace does.
+      if (this.saveFailedSubject$.getValue()) {
+        this.toastsService.showToast('Workspace is saving again.', 'Save recovered', true);
+      }
+      this.consecutiveFailures = 0;
+      this.saveFailedSubject$.next(false);
+      this.clearRetryTimer();
+
       this.toastsService.showToast('Saved to PROMPT', 'Save', true);
       return true;
     } catch (error) {
