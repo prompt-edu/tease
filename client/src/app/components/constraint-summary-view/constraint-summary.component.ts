@@ -24,8 +24,7 @@ import { ToastsService } from 'src/app/shared/services/toasts.service';
 import { StudentSortService } from 'src/app/shared/services/student-sort.service';
 import { ConstraintBuilderNationalityComponent } from '../constraint-builder-nationality/constraint-builder-nationality.component';
 import { Subscription } from 'rxjs';
-import { MatchingRouterService } from 'src/app/shared/matching/matching-router.service';
-import { CourseIterationsService } from 'src/app/shared/data/course-iteration.service';
+import { MatchingMode, MatchingRouterService } from 'src/app/shared/matching/matching-router.service';import { CourseIterationsService } from 'src/app/shared/data/course-iteration.service';
 
 @Component({
   selector: 'app-constraint-summary',
@@ -48,6 +47,7 @@ export class ConstraintSummaryComponent implements OverlayComponentData, OnInit,
 
   constraintWrappers: ConstraintWrapper[] = [];
   projects: Project[] = [];
+  matchingMode: MatchingMode;
 
   private subscription: Subscription;
 
@@ -69,6 +69,13 @@ export class ConstraintSummaryComponent implements OverlayComponentData, OnInit,
       this.constraintWrappers = constraintWrappers;
     });
     this.projects = this.projectsService.getProjects();
+    this.matchingMode = this.matchingRouterService.getMatchingMode({
+      students: this.studentsService.getStudents(),
+      projects: this.projects,
+      constraintWrappers: this.constraintWrappers,
+      locks: this.lockedStudentsService.getLocks(),
+      courseIteration: this.courseIterationsService.getCourseIteration(),
+    });
   }
 
   ngOnDestroy(): void {
@@ -119,5 +126,9 @@ export class ConstraintSummaryComponent implements OverlayComponentData, OnInit,
   setActive(id: string, active: boolean): void {
     this.constraintsService.setActive(id, active);
     this.constraintWrappers = this.constraintsService.getConstraints();
+  }
+
+  get isCompanyGreedyMode(): boolean {
+    return this.matchingMode === 'company-greedy';
   }
 }

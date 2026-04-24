@@ -13,6 +13,18 @@
           Add Constraint
         </button>
       </div>
+      
+     @if (isCompanyGreedyMode) {
+        <div class="greedy-strategy-note">
+          <div class="fw-semibold mb-1">Greedy Matching Strategy</div>
+          <div class="mb-0">
+            The system builds matches step by step by selecting the best currently available option. Participants are
+            organized into priority tiers, and higher-priority candidates are matched first. This makes the process fast
+            and efficient for larger datasets, but because each decision is made locally, the final allocation may not
+            always be the globally optimal solution.
+          </div>
+        </div>
+      }
 
       @if (constraintWrappers.length) {
         <div class="border border-1 rounded-3 table-container overflow-y-scroll">

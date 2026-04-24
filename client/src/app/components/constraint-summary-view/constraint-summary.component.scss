@@ -39,3 +39,12 @@ th {
     }
   }
 }
+
+.greedy-strategy-note {
+  padding: 0.875rem 1rem;
+  border: 1px solid $border-color;
+  border-radius: 0.5rem;
+  background: $accent-color-light;
+  color: $text-color;
+  line-height: 1.5;
+}
