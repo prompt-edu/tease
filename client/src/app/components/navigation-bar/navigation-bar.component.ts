@@ -119,7 +119,7 @@ export class NavigationBarComponent implements OnInit, OnChanges {
       map(lastExportedAt =>
         lastExportedAt
           ? `Last saved to PROMPT: ${this.formatTimestamp(lastExportedAt)}`
-          : 'Click to save teams to PROMPT'
+          : 'Click to save allocations to PROMPT'
       )
     );
 
