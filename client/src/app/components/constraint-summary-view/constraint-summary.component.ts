@@ -18,14 +18,14 @@ import {
 } from 'src/assets/icons/icons';
 import { ConstraintBuilderOverlayComponent } from '../constraint-builder-overlay/constraint-builder-overlay.component';
 import { LockedStudentsService } from 'src/app/shared/data/locked-students.service';
-import { ConstraintBuilderService } from 'src/app/shared/matching/constraints/constraint-builder/constraint-builder.service';
 import { StudentsService } from 'src/app/shared/data/students.service';
-import { MatchingService } from 'src/app/shared/matching/matching.service';
 import { AllocationsService } from 'src/app/shared/data/allocations.service';
 import { ToastsService } from 'src/app/shared/services/toasts.service';
 import { StudentSortService } from 'src/app/shared/services/student-sort.service';
 import { ConstraintBuilderNationalityComponent } from '../constraint-builder-nationality/constraint-builder-nationality.component';
 import { Subscription } from 'rxjs';
+import { MatchingRouterService } from 'src/app/shared/matching/matching-router.service';
+import { CourseIterationsService } from 'src/app/shared/data/course-iteration.service';
 
 @Component({
   selector: 'app-constraint-summary',
@@ -57,8 +57,8 @@ export class ConstraintSummaryComponent implements OverlayComponentData, OnInit,
     private projectsService: ProjectsService,
     private studentsService: StudentsService,
     private lockedStudentsService: LockedStudentsService,
-    private constraintsBuilderService: ConstraintBuilderService,
-    private matchingService: MatchingService,
+    private matchingRouterService: MatchingRouterService,
+    private courseIterationsService: CourseIterationsService,
     private allocationsService: AllocationsService,
     private toastsService: ToastsService,
     private studentSortService: StudentSortService
@@ -101,18 +101,16 @@ export class ConstraintSummaryComponent implements OverlayComponentData, OnInit,
 
   async distributeTeams(): Promise<void> {
     const locks = this.lockedStudentsService.getLocks();
-    const activeConstraintWrappers = this.constraintWrappers.filter(constraintWrapper => constraintWrapper.isActive);
-    const constraints = this.constraintsBuilderService.createConstraints(
-      this.studentsService.getStudents(),
-      this.projects.map(project => project.id),
-      activeConstraintWrappers,
-      locks
-    );
-    const allocations = await this.matchingService.getAllocations(constraints);
+    const students = this.studentsService.getStudents();
+    const allocations = await this.matchingRouterService.getAllocations({
+      students,
+      projects: this.projects,
+      constraintWrappers: this.constraintWrappers,
+      locks,
+      courseIteration: this.courseIterationsService.getCourseIteration(),
+    });
     if (allocations) {
-      this.allocationsService.setAllocations(
-        this.studentSortService.sortStudentsInAllocations(this.studentsService.getStudents(), allocations)
-      );
+      this.allocationsService.setAllocations(this.studentSortService.sortStudentsInAllocations(students, allocations));
       this.cancel();
       this.toastsService.showToast('Distribution Complete', 'Success', true);
     }
