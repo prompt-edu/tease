@@ -8,6 +8,7 @@ import { StompSubscription } from '@stomp/stompjs';
 import { ConfirmationOverlayComponent } from 'src/app/components/confirmation-overlay/confirmation-overlay.component';
 import { GLOBALS } from '../utils/constants';
 import { ToastsService } from './toasts.service';
+import { Subscription, distinctUntilChanged } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -15,6 +16,12 @@ import { ToastsService } from './toasts.service';
 export class CollaborationService implements OnDestroy {
   private discoverySubscription?: StompSubscription;
   private subscriptions: StompSubscription[] = [];
+  /** Tracks the last known connection state so we can warn on transitions. */
+  private connectionWatchSub: Subscription | null = null;
+  /** Course iteration we last subscribed to — needed to re-subscribe on reconnect. */
+  private activeCourseIterationId: string | null = null;
+  /** Previous value seen by the connection watcher; undefined until the first emission. */
+  private lastSeenConnected: boolean | undefined = undefined;
 
   constructor(
     private websocketService: WebsocketService,
@@ -30,6 +37,7 @@ export class CollaborationService implements OnDestroy {
       subscription.unsubscribe();
     }
     this.discoverySubscription?.unsubscribe();
+    this.connectionWatchSub?.unsubscribe();
   }
 
   private async discover(courseIterationId: string): Promise<CollaborationData> {
@@ -58,10 +66,71 @@ export class CollaborationService implements OnDestroy {
   }
 
   private async subscribe(courseIterationId: string): Promise<void> {
+    this.activeCourseIterationId = courseIterationId;
     await this.subscribeToAllocations(courseIterationId);
     await this.subscribeToLockedStudents(courseIterationId);
     await this.subscribeToConstraints(courseIterationId);
+    this.startConnectionWatch();
     this.toatsService.showToast('Connected to Collaboration', 'Success', true);
+  }
+
+  /**
+   * Watch the underlying STOMP connection and react to lifecycle changes.
+   * On a true → false transition we warn the user (silent send drops are
+   * the worst-case for collaboration UX). On false → true (auto-reconnect
+   * succeeded), we re-establish topic subscriptions and re-broadcast our
+   * current state so peers stay in sync.
+   */
+  private startConnectionWatch(): void {
+    if (this.connectionWatchSub) return;
+    // Anchor on the actual current value of the BehaviorSubject so the
+    // initial seed replay does not look like a transition. Avoids
+    // `startWith(true)`'s implicit assumption that we were previously
+    // connected (which gave a spurious "offline" toast on cold start).
+    this.lastSeenConnected = this.websocketService.isConnected;
+    this.connectionWatchSub = this.websocketService.connected$
+      .pipe(distinctUntilChanged())
+      .subscribe(curr => {
+        const prev = this.lastSeenConnected;
+        this.lastSeenConnected = curr;
+        if (prev === undefined || prev === curr) return;
+        if (prev && !curr) {
+          this.toatsService.showToast(
+            'Lost connection to collaboration. Edits may not sync until reconnected.',
+            'Collaboration offline',
+            false
+          );
+        } else if (!prev && curr && this.activeCourseIterationId) {
+          // Auto-reconnect succeeded — rebind via the full connect() flow
+          // (discover + diff overlay) so a peer's newer state can never
+          // be silently overwritten by our offline-collected local edits.
+          void this.rebindAfterReconnect(this.activeCourseIterationId);
+        }
+      });
+  }
+
+  /**
+   * Reconnect rebind. Routes through the same `connect()` flow used on
+   * cold start so the discovery handshake + diff overlay run again —
+   * without that, any local edits made while offline would silently
+   * clobber a peer's newer state because the topic broadcasts that
+   * `subscribeToX` does on (re-)subscribe push the FULL local snapshot
+   * to the server.
+   */
+  private async rebindAfterReconnect(courseIterationId: string): Promise<void> {
+    for (const sub of this.subscriptions) sub.unsubscribe();
+    this.subscriptions = [];
+    this.discoverySubscription?.unsubscribe();
+    this.discoverySubscription = undefined;
+    try {
+      await this.connect(courseIterationId);
+    } catch {
+      this.toatsService.showToast(
+        'Could not re-subscribe after reconnect. Please reconnect manually.',
+        'Collaboration',
+        false
+      );
+    }
   }
 
   async connect(courseIterationId: string): Promise<void> {
@@ -115,8 +184,12 @@ export class CollaborationService implements OnDestroy {
       subscription.unsubscribe();
     }
     this.subscriptions = [];
+    this.connectionWatchSub?.unsubscribe();
+    this.connectionWatchSub = null;
+    this.lastSeenConnected = undefined;
+    this.activeCourseIterationId = null;
 
-    this.websocketService.connection.disconnect();
+    this.websocketService.connection?.disconnect();
   }
 
   private async subscribeToAllocations(courseIterationId: string): Promise<void> {

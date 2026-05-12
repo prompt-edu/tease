@@ -3,28 +3,86 @@
     <img src="assets/images/logo-s.svg" />
     <div class="text-white fs-3 fw-light">TEASE</div>
     @if (allocationData.courseIteration) {
-      <div class="text-prefix fs-5">{{ allocationData.courseIteration.semesterName }}</div>
-
-      @if (websocketService.connection?.connected) {
-        <fa-icon
-          [icon]="facCheckIcon"
-          class="collaboration-indicator success"
-          role="button"
-          (click)="disconnect()"
-          ngbTooltip="Disconnect from Collaboration"></fa-icon>
-      } @else {
-        <div
-          ngbTooltip="Reconnect to Collaboration"
-          class="collaboration-indicator error"
-          role="button"
-          (click)="connect()">
-          <fa-icon [icon]="facRestartIcon"></fa-icon>
+      <div class="project-meta d-flex flex-column align-items-start gap-1">
+        <div class="text-prefix fs-5 fw-light">
+          {{ allocationData.courseIteration.semesterName }}
         </div>
-      }
+        <div class="project-meta__row d-flex align-items-center gap-2">
+          @if (websocketService.connected$ | async) {
+            <button
+              type="button"
+              class="collab-pill collab-pill--connected"
+              (click)="disconnect()"
+              ngbTooltip="Disconnect from Collaboration"
+              triggers="hover">
+              <fa-icon [icon]="facCheckIcon" class="collab-pill__icon"></fa-icon>
+              <span>Live</span>
+            </button>
+          } @else {
+            <button
+              type="button"
+              class="collab-pill collab-pill--disconnected"
+              (click)="connect()"
+              ngbTooltip="Reconnect to Collaboration"
+              triggers="hover">
+              <fa-icon [icon]="facRestartIcon" class="collab-pill__icon"></fa-icon>
+              <span>Offline</span>
+            </button>
+          }
+
+          @if (workspaceActive$ | async) {
+            @switch (saveStatusLabel$ | async) {
+              @case ('saving') {
+                <div class="save-status" data-state="saving">
+                  <span class="save-status-dot save-status-dot--saving"></span>
+                  <span>Saving Workspace…</span>
+                </div>
+              }
+              @case ('error') {
+                <button
+                  type="button"
+                  class="save-status save-status--clickable"
+                  data-state="error"
+                  (click)="flushWorkspaceNow()"
+                  ngbTooltip="Autosave is failing. Click to retry now."
+                  triggers="hover">
+                  <span class="save-status-dot save-status-dot--error"></span>
+                  <span>Save failed — retrying</span>
+                </button>
+              }
+              @case ('unsaved') {
+                <button
+                  type="button"
+                  class="save-status save-status--clickable"
+                  data-state="unsaved"
+                  (click)="flushWorkspaceNow()"
+                  ngbTooltip="Click to save workspace now"
+                  triggers="hover">
+                  <span class="save-status-dot save-status-dot--unsaved"></span>
+                  <span>Unsaved changes</span>
+                </button>
+              }
+              @case ('saved') {
+                <div
+                  class="save-status"
+                  data-state="saved"
+                  [ngbTooltip]="(workspaceSavedTooltip$ | async) ?? ''"
+                  triggers="hover">
+                  <span class="save-status-dot save-status-dot--saved"></span>
+                  <span>Workspace Saved</span>
+                </div>
+              }
+            }
+          }
+        </div>
+      </div>
     }
   </div>
 
   <div class="d-flex gap-2 align-items-center flex-wrap">
+    @if (allocationData.courseIteration) {
+      <app-global-search class="me-2"></app-global-search>
+    }
     @if (!fulfillsAllConstraints) {
       <div
         class="wh-4 bg-warn rounded-circle d-flex align-items-center justify-content-center"
@@ -52,8 +110,20 @@
     </div>
     <button type="button" class="btn btn-primary btn-icon-text" (click)="showConstraintSummaryOverlay()">
       <fa-icon [icon]="facGroupsIcon" class="pe-2 fs-3"></fa-icon>
-      <div>Distribute Projects</div>
+      <div>Distribute</div>
     </button>
+
+    @if (workspaceActive$ | async) {
+      <button
+        type="button"
+        class="btn btn-primary btn-icon-text"
+        (click)="saveToPrompt()"
+        [ngbTooltip]="(saveTooltip$ | async) ?? ''"
+        triggers="hover">
+        <fa-icon [icon]="facExportIcon" class="pe-2 fs-3"></fa-icon>
+        <div>Save Allocations</div>
+      </button>
+    }
 
     <div ngbDropdown class="d-inline-block">
       <button type="button" class="btn btn-icon btn-icon-primary" id="moreDropdown" ngbDropdownToggle>

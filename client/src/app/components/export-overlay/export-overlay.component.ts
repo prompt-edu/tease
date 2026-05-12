@@ -1,9 +1,6 @@
 import { Component, ElementRef, ViewChild } from '@angular/core';
 import { OverlayComponentData } from '../../overlay.service';
 import JSZip from 'jszip';
-import { PromptService } from 'src/app/shared/services/prompt.service';
-import { ToastsService } from 'src/app/shared/services/toasts.service';
-import { HttpErrorResponse } from '@angular/common/http';
 import { AllocationsService } from 'src/app/shared/data/allocations.service';
 import { saveAs } from 'file-saver';
 import { Allocation } from 'src/app/api/models';
@@ -12,7 +9,7 @@ import { StudentsService } from 'src/app/shared/data/students.service';
 import { AllocationData } from 'src/app/shared/models/allocation-data';
 import { NgxCaptureService } from 'ngx-capture';
 import { Observable, forkJoin, map } from 'rxjs';
-import { CourseIterationsService } from 'src/app/shared/data/course-iteration.service';
+import { WorkspaceStateService } from 'src/app/shared/services/workspace-state.service';
 
 @Component({
   selector: 'app-export-overlay',
@@ -21,6 +18,7 @@ import { CourseIterationsService } from 'src/app/shared/data/course-iteration.se
   standalone: false,
 })
 export class ExportOverlayComponent implements OverlayComponentData {
+  /** Host-supplied data payload; provides the current allocation snapshot to the overlay. */
   public data: {
     allocationData: AllocationData;
   };
@@ -28,39 +26,50 @@ export class ExportOverlayComponent implements OverlayComponentData {
   private readonly EXPORT_DATA_TYPE = 'text/csv;charset=utf-8';
   private readonly EXPORT_PROJECT_IMAGES_NAME = 'TEASE-projects.zip';
 
+  /** Hidden DOM subtree used for rasterising project cards into PNGs. */
   @ViewChild('projectsScreen', { static: true }) projectsScreen: ElementRef;
 
+  /** Spinner flag for the project-images export. */
   isLoading = false;
+  /** Spinner flag for the "Save Teams" (POST /save) button. */
+  isSavingToPrompt = false;
 
+  /** Wires the Angular dependencies for the overlay. */
   constructor(
-    private promptService: PromptService,
-    private toastsService: ToastsService,
     private allocationsService: AllocationsService,
     private projectsService: ProjectsService,
     private studentsService: StudentsService,
-    private courseIterationsService: CourseIterationsService,
-    private captureService: NgxCaptureService
+    private captureService: NgxCaptureService,
+    private workspaceStateService: WorkspaceStateService
   ) {}
 
-  async exportPrompt() {
-    const allocations = this.allocationsService.getAllocations();
+  /**
+   * Primary "Save to PROMPT" action — persists both the workspace and
+   * the finalised allocations via `POST /tease/course_phase/{id}/save`.
+   *
+   * Only available when a PROMPT course phase is currently hydrated
+   * (Workflow A or B). Defaults to `false` when running in CSV-only mode.
+   */
+  get canSaveToPrompt(): boolean {
+    return !!this.workspaceStateService.coursePhaseId;
+  }
+
+  /**
+   * Delegate to `WorkspaceStateService.saveToPrompt()` — publishes the
+   * workspace + finalised allocations to PROMPT in a single transaction.
+   * No-op when no PROMPT course phase is hydrated (CSV-only mode).
+   */
+  async saveToPrompt(): Promise<void> {
+    if (!this.canSaveToPrompt) return;
+    this.isSavingToPrompt = true;
     try {
-      const courseIteration = this.courseIterationsService.getCourseIteration();
-      if (await this.promptService.postAllocations(allocations, courseIteration?.id)) {
-        this.toastsService.showToast('Export successful', 'Export', true);
-      } else {
-        this.toastsService.showToast('Export failed', 'Export', false);
-      }
-    } catch (error) {
-      if (error instanceof HttpErrorResponse) {
-        console.log('Error while fetching data: ', error);
-        this.toastsService.showToast(`Error ${error.status}: ${error.statusText}`, 'Export failed', false);
-      } else {
-        console.log('Unknown error: ', error);
-      }
+      await this.workspaceStateService.saveToPrompt();
+    } finally {
+      this.isSavingToPrompt = false;
     }
   }
 
+  /** Build and download the allocation CSV file (`TEASE-mappings.csv`). */
   exportCSV() {
     const allocations = this.allocationsService.getAllocations();
     const csvData = this.allocationsToCSV(allocations);
@@ -81,6 +90,10 @@ export class ExportOverlayComponent implements OverlayComponentData {
     return csvData;
   }
 
+  /**
+   * Rasterise every project card + the full team board to PNG and
+   * package them into a single zip for download.
+   */
   async exportProjectImages(): Promise<void> {
     this.isLoading = true;
 

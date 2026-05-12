@@ -13,28 +13,6 @@
     <div class="d-flex flex-column gap-3">
       <button type="button" class="btn btn-primary" (click)="importFromCSV()">Choose CSV File</button>
       <button type="button" class="btn btn-primary" (click)="loadExampleData()">Load Example Data</button>
-
-      @if (this.isImportPossible()) {
-        <h5 class="fw-semibold pt-3">Import Data from PROMPT</h5>
-        <div class="d-flex gap-3 flex-grow-1">
-          <div class="form-floating w-100" [formGroup]="form">
-            <select class="form-select" id="courseIteration" formControlName="courseIteration">
-              <option selected disabled>Select Course Iteration</option>
-              @for (courseIteration of courseIterationSelectData; track courseIteration) {
-                <option value="{{ courseIteration.id }}">{{ courseIteration.name }}</option>
-              }
-            </select>
-            <label for="courseIteration">Course Iteration</label>
-          </div>
-          <button
-            type="button"
-            class="btn btn-primary w-100"
-            (click)="importFromPrompt()"
-            [disabled]="!form.valid && !form.touched">
-            Import
-          </button>
-        </div>
-      }
     </div>
   </div>
 </div>
