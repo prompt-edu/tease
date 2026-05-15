@@ -9,9 +9,9 @@ import { ConfirmationOverlayComponent } from 'src/app/components/confirmation-ov
 import { GLOBALS } from '../utils/constants';
 import { ToastsService } from './toasts.service';
 
-@Injectable({
-  providedIn: 'root',
-})
+const DISCOVERY_TIMEOUT_MS = 3000;
+
+@Injectable({ providedIn: 'root' })
 export class CollaborationService implements OnDestroy {
   private discoverySubscription?: StompSubscription;
   private subscriptions: StompSubscription[] = [];
@@ -22,143 +22,113 @@ export class CollaborationService implements OnDestroy {
     private allocationsService: AllocationsService,
     private constraintsService: ConstraintsService,
     private lockedStudentsService: LockedStudentsService,
-    private toatsService: ToastsService
+    private toastsService: ToastsService
   ) {}
 
   ngOnDestroy(): void {
-    for (const subscription of this.subscriptions || []) {
-      subscription.unsubscribe();
-    }
-    this.discoverySubscription?.unsubscribe();
-  }
-
-  private async discover(courseIterationId: string): Promise<CollaborationData> {
-    return new Promise<CollaborationData>((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        this.toatsService.showToast('Login to PROMPT', 'Collaboration Failed', false);
-        reject(new Error('Timeout waiting for message'));
-      }, 3000);
-
-      this.websocketService
-        .subscribe(courseIterationId, GLOBALS.WS_TOPIC_DISCOVERY, collaborationData => {
-          clearTimeout(timeout);
-          this.discoverySubscription?.unsubscribe();
-          resolve(collaborationData);
-        })
-        .then(subscription => {
-          this.discoverySubscription = subscription;
-          this.websocketService.send(courseIterationId, GLOBALS.WS_TOPIC_DISCOVERY);
-        })
-        .catch(error => {
-          clearTimeout(timeout);
-          this.toatsService.showToast('Login to PROMPT', 'Collaboration Failed', false);
-          reject(error);
-        });
-    });
-  }
-
-  private async subscribe(courseIterationId: string): Promise<void> {
-    await this.subscribeToAllocations(courseIterationId);
-    await this.subscribeToLockedStudents(courseIterationId);
-    await this.subscribeToConstraints(courseIterationId);
-    this.toatsService.showToast('Connected to Collaboration', 'Success', true);
+    this.disconnect();
   }
 
   async connect(courseIterationId: string): Promise<void> {
-    if (!courseIterationId) {
+    if (!courseIterationId) return;
+    const remote = await this.discover(courseIterationId);
+    if (!remote?.allocations) {
+      await this.subscribeAll(courseIterationId);
       return;
     }
-    const serverCollaborationData = await this.discover(courseIterationId);
-    if (!serverCollaborationData || !serverCollaborationData.allocations) {
-      this.subscribe(courseIterationId);
-      return;
-    }
-
-    if (
-      this.allocationsService.equalsCurrentAllocations(serverCollaborationData.allocations) &&
-      this.constraintsService.equalsCurrentConstraints(serverCollaborationData.constraints) &&
-      this.lockedStudentsService.equalsCurrentLockedStudentsUsingKeyValuePair(serverCollaborationData.lockedStudents)
-    ) {
-      this.subscribe(courseIterationId);
+    if (this.matchesLocalState(remote)) {
+      await this.subscribeAll(courseIterationId);
       return;
     }
 
-    const overlayData = {
+    this.overlayService.displayComponent(ConfirmationOverlayComponent, {
       title: 'Connected to Collaboration Service',
       description:
-        'The Collaboration Service has a different allocations and constraints state available. Do you want to load it? This will overwrite your current allocations, constraints and locked students. Not loading it will overwrite the other data. Be careful, this action cannot be undone.',
+        'The Collaboration Service has a different state available. Loading it will overwrite your current allocations, constraints and locked students. Not loading it will overwrite the remote data. This action cannot be undone.',
       primaryText: 'Use Collaboration Data',
-      primaryButtonStyle: 'btn-secondary',
+      primaryButtonClass: 'btn-secondary',
       primaryAction: async () => {
-        const serverCollaborationData = await this.discover(courseIterationId);
-        this.allocationsService.setAllocations(serverCollaborationData.allocations, false);
-        this.constraintsService.setConstraints(serverCollaborationData.constraints, false);
-        this.lockedStudentsService.setLocksAsArray(serverCollaborationData.lockedStudents, false);
-        await this.subscribe(courseIterationId);
+        const fresh = await this.discover(courseIterationId);
+        this.allocationsService.setAllocations(fresh.allocations, false);
+        this.constraintsService.setConstraints(fresh.constraints, false);
+        this.lockedStudentsService.setLocksAsArray(fresh.lockedStudents, false);
+        await this.subscribeAll(courseIterationId);
         this.overlayService.closeOverlay();
       },
       secondaryText: 'Overwrite Collaboration Data',
       secondaryButtonStyle: 'btn-warn',
       secondaryAction: async () => {
-        await this.subscribe(courseIterationId);
+        await this.subscribeAll(courseIterationId);
         this.overlayService.closeOverlay();
       },
       isDismissable: false,
-    };
-
-    this.overlayService.displayComponent(ConfirmationOverlayComponent, overlayData);
+    });
   }
 
   async disconnect(): Promise<void> {
     this.discoverySubscription?.unsubscribe();
-    for (const subscription of this.subscriptions || []) {
-      subscription.unsubscribe();
-    }
+    this.discoverySubscription = undefined;
+    this.subscriptions.forEach(s => s.unsubscribe());
     this.subscriptions = [];
-
-    this.websocketService.connection.disconnect();
+    this.websocketService.connection?.disconnect();
   }
 
-  private async subscribeToAllocations(courseIterationId: string): Promise<void> {
-    this.websocketService.send(
-      courseIterationId,
-      GLOBALS.WS_TOPIC_ALLOCATIONS,
-      this.allocationsService.getAllocationsAsString()
-    );
+  private discover(courseIterationId: string): Promise<CollaborationData> {
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        this.toastsService.showToast('Login to PROMPT', 'Collaboration Failed', false);
+        reject(new Error('Timeout waiting for collaboration handshake'));
+      }, DISCOVERY_TIMEOUT_MS);
 
-    this.subscriptions.push(
-      await this.websocketService.subscribe(courseIterationId, GLOBALS.WS_TOPIC_ALLOCATIONS, allocations => {
-        console.log('Received allocations');
-        this.allocationsService.setAllocations(allocations, false);
-      })
+      this.websocketService
+        .subscribe(courseIterationId, GLOBALS.WS_TOPIC_DISCOVERY, data => {
+          clearTimeout(timeout);
+          this.discoverySubscription?.unsubscribe();
+          resolve(data);
+        })
+        .then(sub => {
+          this.discoverySubscription = sub;
+          this.websocketService.send(courseIterationId, GLOBALS.WS_TOPIC_DISCOVERY);
+        })
+        .catch(err => {
+          clearTimeout(timeout);
+          this.toastsService.showToast('Login to PROMPT', 'Collaboration Failed', false);
+          reject(err);
+        });
+    });
+  }
+
+  private matchesLocalState(remote: CollaborationData): boolean {
+    return (
+      this.allocationsService.equalsCurrentAllocations(remote.allocations) &&
+      this.constraintsService.equalsCurrentConstraints(remote.constraints) &&
+      this.lockedStudentsService.equalsCurrentLockedStudentsUsingKeyValuePair(remote.lockedStudents)
     );
   }
 
-  private async subscribeToLockedStudents(courseIterationId: string): Promise<void> {
-    this.websocketService.send(
-      courseIterationId,
-      GLOBALS.WS_TOPIC_LOCKED_STUDENTS,
-      this.lockedStudentsService.getLocksAsString()
-    );
-
-    this.subscriptions.push(
-      await this.websocketService.subscribe(courseIterationId, GLOBALS.WS_TOPIC_LOCKED_STUDENTS, lockedStudents => {
-        this.lockedStudentsService.setLocksAsArray(lockedStudents, false);
-      })
-    );
+  private async subscribeAll(courseIterationId: string): Promise<void> {
+    await Promise.all([
+      this.bindTopic(courseIterationId, GLOBALS.WS_TOPIC_ALLOCATIONS, this.allocationsService.getAllocationsAsString(), data =>
+        this.allocationsService.setAllocations(data, false)
+      ),
+      this.bindTopic(courseIterationId, GLOBALS.WS_TOPIC_LOCKED_STUDENTS, this.lockedStudentsService.getLocksAsString(), data =>
+        this.lockedStudentsService.setLocksAsArray(data, false)
+      ),
+      this.bindTopic(courseIterationId, GLOBALS.WS_TOPIC_CONSTRAINTS, this.constraintsService.getConstraintsAsString(), data =>
+        this.constraintsService.setConstraints(data, false)
+      ),
+    ]);
+    this.toastsService.showToast('Connected to Collaboration', 'Success', true);
   }
 
-  private async subscribeToConstraints(courseIterationId: string): Promise<void> {
-    this.websocketService.send(
-      courseIterationId,
-      GLOBALS.WS_TOPIC_CONSTRAINTS,
-      this.constraintsService.getConstraintsAsString()
-    );
-
-    this.subscriptions.push(
-      await this.websocketService.subscribe(courseIterationId, GLOBALS.WS_TOPIC_CONSTRAINTS, constraints => {
-        this.constraintsService.setConstraints(constraints, false);
-      })
-    );
+  private async bindTopic(
+    courseIterationId: string,
+    topic: string,
+    snapshot: string,
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+    onMessage: (data: any) => void
+  ): Promise<void> {
+    this.websocketService.send(courseIterationId, topic, snapshot);
+    this.subscriptions.push(await this.websocketService.subscribe(courseIterationId, topic, onMessage));
   }
 }

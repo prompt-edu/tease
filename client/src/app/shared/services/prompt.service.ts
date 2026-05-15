@@ -1,15 +1,16 @@
 import { Injectable } from '@angular/core';
-import { ApiService } from '../../api/api.service';
-import { ApiFnRequired } from '../../api/api.service';
+import { ApiService, ApiFnRequired } from '../../api/api.service';
 import { teaseCoursePhaseCourseIterationIdProjectsGet as getProjects } from '../../api/fn/projects/tease-course-phase-course-iteration-id-projects-get';
 import { teaseCoursePhaseCourseIterationIdSkillsGet as getSkills } from '../../api/fn/skills/tease-course-phase-course-iteration-id-skills-get';
 import { teaseCoursePhaseCourseIterationIdStudentsGet as getStudents } from '../../api/fn/students/tease-course-phase-course-iteration-id-students-get';
 import { teaseCoursePhaseCourseIterationIdAllocationsGet as getAllocations } from '../../api/fn/allocations/tease-course-phase-course-iteration-id-allocations-get';
-import { teaseCoursePhaseCourseIterationIdAllocationsPost as postAllocations } from 'src/app/api/fn/allocations/tease-course-phase-course-iteration-id-allocations-post';
 import { teaseCoursePhasesGet as getCourseIterations } from 'src/app/api/fn/course-iterations/tease-course-phases-get';
-import { Observable, lastValueFrom } from 'rxjs';
+import { teaseCoursePhaseCoursePhaseIdWorkspaceGet as getWorkspace } from 'src/app/api/fn/workspace/tease-course-phase-course-phase-id-workspace-get';
+import { teaseCoursePhaseCoursePhaseIdWorkspacePut as putWorkspace } from 'src/app/api/fn/workspace/tease-course-phase-course-phase-id-workspace-put';
+import { teaseCoursePhaseCoursePhaseIdSavePost as postSave } from 'src/app/api/fn/workspace/tease-course-phase-course-phase-id-save-post';
+import { lastValueFrom } from 'rxjs';
 import { Skill, Student, Project, Allocation, CourseIteration } from 'src/app/api/models';
-import { StrictHttpResponse } from 'src/app/api/strict-http-response';
+import { TeaseSaveRequest, TeaseWorkspace, TeaseWorkspaceUpsert } from 'src/app/api/models/tease-workspace';
 import { GLOBALS } from '../utils/constants';
 
 @Injectable({
@@ -18,42 +19,46 @@ import { GLOBALS } from '../utils/constants';
 export class PromptService {
   constructor(private apiService: ApiService) {}
 
-  private async fetchValue<P, R>(fn: ApiFnRequired<P, R>, courseIterationId?: string): Promise<R> {
-    const param: P = { courseIterationId: courseIterationId } as P;
-    const values$ = this.apiService.invoke(fn, param);
-    return lastValueFrom(values$);
+  private fetchValue<P, R>(fn: ApiFnRequired<P, R>, courseIterationId?: string): Promise<R> {
+    return lastValueFrom(this.apiService.invoke(fn, { courseIterationId } as P));
   }
 
-  async getProjects(courseIterationId: string): Promise<Project[]> {
+  getProjects(courseIterationId: string): Promise<Project[]> {
     return this.fetchValue(getProjects, courseIterationId);
   }
 
-  async getSkills(courseIterationId: string): Promise<Skill[]> {
+  getSkills(courseIterationId: string): Promise<Skill[]> {
     return this.fetchValue(getSkills, courseIterationId);
   }
 
-  async getStudents(courseIterationId: string): Promise<Student[]> {
+  getStudents(courseIterationId: string): Promise<Student[]> {
     return this.fetchValue(getStudents, courseIterationId);
   }
 
-  async getAllocations(courseIterationId: string): Promise<Allocation[]> {
+  getAllocations(courseIterationId: string): Promise<Allocation[]> {
     return this.fetchValue(getAllocations, courseIterationId);
   }
 
-  async postAllocations(allocations: Allocation[], courseIterationId: string): Promise<boolean> {
-    const params = {
-      courseIterationId: courseIterationId,
-      body: allocations,
-    };
-    const result: Observable<StrictHttpResponse<void>> = this.apiService.invoke$Response(postAllocations, params);
-    return (await lastValueFrom(result)).ok;
-  }
-
-  async getCourseIterations(): Promise<CourseIteration[]> {
+  getCourseIterations(): Promise<CourseIteration[]> {
     return this.fetchValue(getCourseIterations);
   }
 
-  isImportPossible(): boolean {
+  /** Returns the persisted workspace for this course phase (empty default if none). */
+  getWorkspace(coursePhaseId: string): Promise<TeaseWorkspace> {
+    return lastValueFrom(this.apiService.invoke(getWorkspace, { coursePhaseId }));
+  }
+
+  /** Upsert workspace draft. Does NOT touch the allocations table. */
+  putWorkspace(coursePhaseId: string, workspace: TeaseWorkspaceUpsert): Promise<TeaseWorkspace> {
+    return lastValueFrom(this.apiService.invoke(putWorkspace, { coursePhaseId, body: workspace }));
+  }
+
+  /** Atomic publish: workspace + allocations in one server-side transaction. */
+  postSave(coursePhaseId: string, payload: TeaseSaveRequest): Promise<TeaseWorkspace> {
+    return lastValueFrom(this.apiService.invoke(postSave, { coursePhaseId, body: payload }));
+  }
+
+  hasJwt(): boolean {
     return localStorage.getItem(GLOBALS.LS_KEY_JWT) !== null;
   }
 }
