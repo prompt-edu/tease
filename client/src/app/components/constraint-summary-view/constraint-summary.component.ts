@@ -113,18 +113,9 @@ export class ConstraintSummaryComponent implements OverlayComponentData, OnInit,
     );
     const allocations = await this.matchingService.getAllocations(constraints);
     if (allocations) {
-      // The LP solver callback can complete outside Angular change detection.
-      // Re-enter the zone so the freshly computed allocations render immediately
-      // after one click. Inside the zone we also re-broadcast the constraint +
-      // lock state used by this solve BEFORE pushing the new allocation, so
-      // peers can never see allocations without the producing inputs — cheap
-      // insurance against earlier broadcasts having dropped silently (e.g. a
-      // brief WS hiccup) and against cross-topic ordering surprises at the
-      // receiver.
+      // LP solver callback can complete outside the zone; re-enter so the new
+      // allocations render immediately.
       this.ngZone.run(() => {
-        this.constraintsService.setConstraints(this.constraintsService.getConstraints());
-        this.lockedStudentsService.setLocks(this.lockedStudentsService.getLocks());
-
         this.allocationsService.setAllocations(
           this.studentSortService.sortStudentsInAllocations(this.studentsService.getStudents(), allocations)
         );

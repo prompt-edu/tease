@@ -14,15 +14,11 @@
       </div>
     } @else if (hasError) {
       <div class="alert alert-warning mb-0">
-        Could not reach PROMPT. You can retry or use CSV import instead.
+        Could not reach PROMPT or no course phases are available. You can retry or use CSV import instead.
       </div>
       <button type="button" class="btn btn-primary align-self-start" (click)="loadCoursePhases()">
         Retry
       </button>
-    } @else if (!coursePhases.length) {
-      <div class="alert alert-info mb-0">
-        No course phases are available for your account on PROMPT.
-      </div>
     } @else {
       <div class="list-group project-picker-list">
         @for (phase of coursePhases; track phase.id) {

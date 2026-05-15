@@ -59,24 +59,12 @@
 
     @if (workspaceActive$ | async) {
       <div class="save-cluster d-flex align-items-center gap-2">
-        @switch (saveStatusLabel$ | async) {
+        @switch (saveStatus$ | async) {
           @case ('saving') {
             <div class="save-status" data-state="saving">
               <span class="save-status-dot save-status-dot--saving"></span>
               <span>Saving Workspace...</span>
             </div>
-          }
-          @case ('error') {
-            <button
-              type="button"
-              class="save-status save-status--clickable"
-              data-state="error"
-              (click)="flushWorkspaceNow()"
-              ngbTooltip="Autosave is failing. Click to retry now."
-              triggers="hover">
-              <span class="save-status-dot save-status-dot--error"></span>
-              <span>Save failed — retrying</span>
-            </button>
           }
           @case ('unsaved') {
             <button
