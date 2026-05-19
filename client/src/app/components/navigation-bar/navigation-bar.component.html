@@ -3,9 +3,11 @@
     <img src="assets/images/logo-s.svg" />
     <div class="text-white fs-3 fw-light">TEASE</div>
     @if (allocationData.courseIteration) {
-      <div class="text-prefix fs-5">{{ allocationData.courseIteration.semesterName }}</div>
+      <div class="text-prefix fs-5 fw-light">
+        {{ allocationData.courseIteration.semesterName }}
+      </div>
 
-      @if (websocketService.connection?.connected) {
+      @if (websocketService.connected$ | async) {
         <fa-icon
           [icon]="facCheckIcon"
           class="collaboration-indicator success"
@@ -52,8 +54,52 @@
     </div>
     <button type="button" class="btn btn-primary btn-icon-text" (click)="showConstraintSummaryOverlay()">
       <fa-icon [icon]="facGroupsIcon" class="pe-2 fs-3"></fa-icon>
-      <div>Distribute Projects</div>
+      <div>Distribute</div>
     </button>
+
+    @if (workspaceActive$ | async) {
+      <div class="save-cluster d-flex align-items-center gap-2">
+        @switch (saveStatus$ | async) {
+          @case ('saving') {
+            <div class="save-status" data-state="saving">
+              <span class="save-status-dot save-status-dot--saving"></span>
+              <span>Saving Workspace...</span>
+            </div>
+          }
+          @case ('unsaved') {
+            <button
+              type="button"
+              class="save-status save-status--clickable"
+              data-state="unsaved"
+              (click)="flushWorkspaceNow()"
+              ngbTooltip="Click to save workspace now"
+              triggers="hover">
+              <span class="save-status-dot save-status-dot--unsaved"></span>
+              <span>Unsaved changes</span>
+            </button>
+          }
+          @case ('saved') {
+            <div
+              class="save-status"
+              data-state="saved"
+              [ngbTooltip]="(workspaceSavedTooltip$ | async) ?? ''"
+              triggers="hover">
+              <span class="save-status-dot save-status-dot--saved"></span>
+              <span>Workspace Saved</span>
+            </div>
+          }
+        }
+        <button
+          type="button"
+          class="btn btn-primary btn-icon-text"
+          (click)="saveToPrompt()"
+          [ngbTooltip]="(saveTooltip$ | async) ?? ''"
+          triggers="hover">
+          <fa-icon [icon]="facExportIcon" class="pe-2 fs-3"></fa-icon>
+          <div>Save Allocations</div>
+        </button>
+      </div>
+    }
 
     <div ngbDropdown class="d-inline-block">
       <button type="button" class="btn btn-icon btn-icon-primary" id="moreDropdown" ngbDropdownToggle>
