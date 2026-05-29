@@ -1,0 +1,102 @@
+name: Test
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test-go:
+    name: Go Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: server-go/go.sum
+
+      - name: Run Go tests with race detector
+        working-directory: server-go
+        run: go test ./... -race -coverprofile=coverage.out
+
+      - name: Upload Go coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-coverage
+          path: server-go/coverage.out
+
+  test-react:
+    name: React Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: client-react/package-lock.json
+
+      - name: Install dependencies
+        working-directory: client-react
+        run: npm ci
+
+      - name: Run unit tests with coverage
+        working-directory: client-react
+        run: npm run test:coverage
+
+      - name: Upload React coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: react-coverage
+          path: client-react/coverage/
+
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: server-go/go.sum
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: client-react/package-lock.json
+
+      - name: Install React dependencies
+        working-directory: client-react
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: client-react
+        run: npx playwright install --with-deps chromium
+
+      - name: Start Go server
+        working-directory: server-go
+        run: go run ./cmd/server &
+        env:
+          ADDR: ':8081'
+
+      - name: Run E2E tests
+        working-directory: client-react
+        run: npx playwright test
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: client-react/playwright-report/
