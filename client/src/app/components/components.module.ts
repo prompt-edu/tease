@@ -24,6 +24,8 @@ import { SharedModule } from '../shared/shared.module';
 import { ConstraintBuilderNationalityComponent } from './constraint-builder-nationality/constraint-builder-nationality.component';
 import { SelectComponent } from './select/select.component';
 import { ConstraintHelpComponent } from './constraint-help/constraint-help.component';
+import { ProjectPickerComponent } from './project-picker/project-picker.component';
+import { GlobalSearchComponent } from './global-search/global-search.component';
 
 @NgModule({
   declarations: [
@@ -43,8 +45,16 @@ import { ConstraintHelpComponent } from './constraint-help/constraint-help.compo
     ConstraintBuilderNationalityComponent,
     SelectComponent,
     ConstraintHelpComponent,
+    ProjectPickerComponent,
+    GlobalSearchComponent,
   ],
-  exports: [NavigationBarComponent, ProjectsComponent, UtilityComponent, IntroCardComponent],
+  exports: [
+    NavigationBarComponent,
+    ProjectsComponent,
+    UtilityComponent,
+    IntroCardComponent,
+    ProjectPickerComponent,
+  ],
   providers: [],
   imports: [
     CommonModule,

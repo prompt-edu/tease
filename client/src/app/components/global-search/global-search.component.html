@@ -1,0 +1,58 @@
+<div class="global-search">
+  <div class="global-search__input-wrapper">
+    <input
+      #queryInput
+      type="search"
+      class="form-control global-search__input"
+      placeholder="Search participants…"
+      [formControl]="query"
+      (focus)="onFocus()"
+      (keydown)="onKeydown($event)"
+      autocomplete="off"
+      spellcheck="false"
+      aria-label="Search participants" />
+    @if (query.value) {
+      <button
+        type="button"
+        class="global-search__clear"
+        (click)="clear()"
+        aria-label="Clear search">
+        ×
+      </button>
+    }
+  </div>
+
+  @if (open) {
+    <div class="global-search__menu" role="listbox">
+      @if (!results.length) {
+        <div class="global-search__empty">No participants match "{{ query.value }}".</div>
+      } @else {
+        @for (result of results; track result.studentId; let i = $index) {
+          <button
+            type="button"
+            role="option"
+            class="global-search__result"
+            [class.global-search__result--focused]="i === focusedIndex"
+            [attr.aria-selected]="i === focusedIndex"
+            (click)="activate(result)"
+            (mouseenter)="focusedIndex = i">
+            <div class="global-search__result-primary">
+              <span class="global-search__result-name">{{ result.displayName }}</span>
+              <span class="global-search__result-badge">{{ matchedFieldLabel(result) }}</span>
+            </div>
+            <div class="global-search__result-secondary">
+              <span class="global-search__result-email">{{ result.email }}</span>
+              @if (result.teamName) {
+                <span class="global-search__result-team">· {{ result.teamName }}</span>
+              } @else {
+                <span class="global-search__result-team global-search__result-team--unallocated">
+                  · unallocated
+                </span>
+              }
+            </div>
+          </button>
+        }
+      }
+    </div>
+  }
+</div>

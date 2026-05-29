@@ -1,6 +1,10 @@
-@if (dataLoaded) {
+@if (mode === 'picker') {
+  <app-project-picker (coursePhaseSelected)="onCoursePhaseSelected($event)"></app-project-picker>
+} @else if (dataLoaded) {
   <div class="bg-bright h-100 d-flex flex-column">
-    <app-navigation-bar [allocationData]="allocationData"></app-navigation-bar>
+    <app-navigation-bar
+      [allocationData]="allocationData"
+      (coursePhaseSelected)="onCoursePhaseSelected($event)"></app-navigation-bar>
     <app-projects class="flex-grow-1 overflow-hidden" [projectsData]="allocationData.projectsData"></app-projects>
     <div
       class="resizable"

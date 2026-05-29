@@ -16,3 +16,32 @@ body {
   right: 0;
   bottom: 0;
 }
+
+// --- Global search highlight ---------------------------------------------
+//
+// Applied by `StudentHighlightService` to a student card after the user
+// jumps to it from the participant search dropdown. Lives at the global
+// scope because the target elements live inside team / project subtrees
+// that don't share a stylesheet with the navigation header.
+.global-search-highlight {
+  animation: global-search-pulse 2.5s ease-out;
+  position: relative;
+  z-index: 5;
+}
+
+@keyframes global-search-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 200, 0, 0.85);
+    outline: 2px solid rgba(255, 200, 0, 0.85);
+    outline-offset: 2px;
+  }
+  60% {
+    box-shadow: 0 0 0 12px rgba(255, 200, 0, 0);
+    outline-color: rgba(255, 200, 0, 0.85);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 200, 0, 0);
+    outline: 2px solid rgba(255, 200, 0, 0);
+    outline-offset: 2px;
+  }
+}
