@@ -163,6 +163,7 @@ export class WorkspaceStateService implements OnDestroy {
       const now = new Date().toISOString();
       this.lastSavedAtSubject$.next(saved?.lastSavedAt ?? now);
       this.lastExportedAtSubject$.next(saved?.lastExportedAt ?? now);
+      this.resetAutosaveFailure();
       if (this.editCounter === editsAtStart) this.dirtySubject$.next(false);
       this.toastsService.showToast('Saved to PROMPT', 'Save', true);
       return true;
@@ -249,7 +250,9 @@ export class WorkspaceStateService implements OnDestroy {
       this.savingSubject$.next(false);
       // An edit can land while this request is in flight. Its debounce is
       // skipped while saving, so queue a new save once this request completes.
-      if (this.coursePhaseId === phaseId && this.dirtySubject$.getValue() && !this.autosaveRetryTimer) {
+      // Checking the edit counter avoids an endless retry loop after the
+      // capped retry budget is exhausted and the workspace remains dirty.
+      if (this.coursePhaseId === phaseId && this.editCounter !== editsAtStart && !this.autosaveRetryTimer) {
         this.autosaveTrigger$.next();
       }
     }

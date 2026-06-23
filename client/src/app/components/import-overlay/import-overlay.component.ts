@@ -51,8 +51,19 @@ export class ImportOverlayComponent implements OverlayComponentData {
     this.setStudentData(data.students, data.projects, data.skills);
   }
 
-  async loadExampleData() {
-    this.onFileChanged({ target: { files: ['assets/persons_example.csv'] } });
+  async loadExampleData(): Promise<void> {
+    try {
+      const response = await fetch('assets/persons_example.csv');
+      if (!response.ok) throw new Error(`Failed to load example CSV: ${response.status}`);
+
+      const file = new File([await response.blob()], 'persons_example.csv', {
+        type: response.headers.get('content-type') ?? 'text/csv',
+      });
+      await this.onFileChanged({ target: { files: [file] } });
+    } catch (error) {
+      console.error('Failed to load example CSV', error);
+      this.toastsService.showToast('Could not load example CSV file', 'Import', false);
+    }
   }
 
   private setStudentData(students: Student[], projects: Project[], skills: Skill[]): void {
