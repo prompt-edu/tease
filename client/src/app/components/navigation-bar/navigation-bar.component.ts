@@ -18,6 +18,10 @@ import { CourseIterationsService } from 'src/app/shared/data/course-iteration.se
 import { WebsocketService } from 'src/app/shared/network/websocket.service';
 import { CollaborationService } from 'src/app/shared/services/collaboration.service';
 import { IconDefinition } from '@fortawesome/fontawesome-svg-core';
+import { WorkspaceStateService } from 'src/app/shared/services/workspace-state.service';
+import { Observable, combineLatest, map } from 'rxjs';
+
+type SaveStatus = 'saving' | 'unsaved' | 'saved' | 'failed';
 
 @Component({
   selector: 'app-navigation-bar',
@@ -32,9 +36,6 @@ export class NavigationBarComponent implements OnInit, OnChanges {
   facImportIcon = teaseIconPack['facImportIcon'];
   facExportIcon = teaseIconPack['facExportIcon'];
   facRestartIcon = teaseIconPack['facRestartIcon'];
-  facSkillCircleIcon = teaseIconPack['facSkillCircleIcon'];
-  facSkillSideIcon = teaseIconPack['facSkillSideIcon'];
-  facSkillDeathIcon = teaseIconPack['facSkillDeathIcon'];
   facAddIcon = teaseIconPack['facAddIcon'];
   facSortIcon = teaseIconPack['facSortIcon'];
   facCheckIcon = teaseIconPack['facCheckIcon'];
@@ -45,6 +46,12 @@ export class NavigationBarComponent implements OnInit, OnChanges {
   dropdownItems: { action: () => void; icon: IconDefinition; label: string; class: string }[];
 
   fulfillsAllConstraints = true;
+
+  /** True when editing a PROMPT-backed workspace (not CSV-only mode). */
+  readonly workspaceActive$: Observable<boolean>;
+  readonly saveStatus$: Observable<SaveStatus>;
+  readonly saveTooltip$: Observable<string>;
+  readonly workspaceSavedTooltip$: Observable<string>;
 
   constructor(
     private overlayService: OverlayService,
@@ -57,12 +64,40 @@ export class NavigationBarComponent implements OnInit, OnChanges {
     private studentSortService: StudentSortService,
     private courseIterationsService: CourseIterationsService,
     private collaborationService: CollaborationService,
-    public websocketService: WebsocketService
-  ) {}
+    public websocketService: WebsocketService,
+    private workspaceStateService: WorkspaceStateService
+  ) {
+    this.workspaceActive$ = this.workspaceStateService.coursePhaseId$.pipe(map(id => !!id));
+    this.saveStatus$ = combineLatest([
+      this.workspaceStateService.saving$,
+      this.workspaceStateService.saveFailed$,
+      this.workspaceStateService.dirty$,
+    ]).pipe(
+      map(([saving, saveFailed, dirty]) => (saving ? 'saving' : saveFailed ? 'failed' : dirty ? 'unsaved' : 'saved'))
+    );
+
+    this.saveTooltip$ = this.workspaceStateService.lastExportedAt$.pipe(
+      map(t => (t ? `Last saved to PROMPT: ${this.formatTimestamp(t)}` : 'Click to save allocations to PROMPT'))
+    );
+    this.workspaceSavedTooltip$ = this.workspaceStateService.lastSavedAt$.pipe(
+      map(t => (t ? `Last saved: ${this.formatTimestamp(t)}` : 'Workspace is up to date'))
+    );
+  }
+
+  private formatTimestamp(iso: string): string {
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return iso;
+    const today = new Date();
+    const sameDay =
+      date.getFullYear() === today.getFullYear() &&
+      date.getMonth() === today.getMonth() &&
+      date.getDate() === today.getDate();
+    const time = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
+    return sameDay ? `today at ${time}` : `${date.toLocaleDateString()} ${time}`;
+  }
 
   ngOnInit(): void {
     this.updateFulfillsAllConstraints();
-
     this.dropdownItems = [
       { action: this.showExportOverlay, icon: this.facExportIcon, label: 'Export', class: 'text-dark' },
       { action: this.showImportOverlay, icon: this.facImportIcon, label: 'Import', class: 'text-dark' },
@@ -94,33 +129,31 @@ export class NavigationBarComponent implements OnInit, OnChanges {
   }
 
   showResetConfirmation = () => {
-    const overlayData = {
+    this.overlayService.displayComponent(ConfirmationOverlayComponent, {
       title: 'Reset Team Allocation',
       description:
-        'Are you sure you want to reset the team allocation? Resetting the team allocation will unpin all students and remove them from their projects. This action cannot be undone.',
+        'Are you sure you want to reset the team allocation? Resetting will unpin all students and remove them from their projects. This action cannot be undone.',
       primaryText: 'Reset',
       primaryButtonClass: 'btn-warn',
       primaryAction: () => {
-        this.deleteDynamicData();
+        this.lockedStudentsService.deleteLocks();
+        this.allocationsService.deleteAllocations();
         this.overlayService.closeOverlay();
       },
-    };
-
-    this.overlayService.displayComponent(ConfirmationOverlayComponent, overlayData);
-  };
-
-  showImportOverlay = () => {
-    this.overlayService.displayComponent(ImportOverlayComponent);
-  };
-
-  showExportOverlay = () => {
-    this.overlayService.displayComponent(ExportOverlayComponent, {
-      allocationData: this.allocationData,
     });
   };
 
+  showImportOverlay = () => this.overlayService.displayComponent(ImportOverlayComponent);
+
+  showExportOverlay = () =>
+    this.overlayService.displayComponent(ExportOverlayComponent, { allocationData: this.allocationData });
+
+  saveToPrompt = (): Promise<boolean> => this.workspaceStateService.saveToPrompt();
+
+  flushWorkspaceNow = (): Promise<boolean> => this.workspaceStateService.saveWorkspaceNow();
+
   showSortConfirmation() {
-    const overlayData = {
+    this.overlayService.displayComponent(ConfirmationOverlayComponent, {
       title: 'Sort Students',
       description: 'Sort students inside projects by their intro course proficiency. This action cannot be undone.',
       primaryText: 'Sort Students',
@@ -133,45 +166,30 @@ export class NavigationBarComponent implements OnInit, OnChanges {
         );
         this.overlayService.closeOverlay();
       },
-    };
-    this.overlayService.displayComponent(ConfirmationOverlayComponent, overlayData);
+    });
   }
 
   showDeleteConfirmation = () => {
-    const overlayData = {
+    this.overlayService.displayComponent(ConfirmationOverlayComponent, {
       title: 'Delete',
       description:
         'Permanently erase all data, including students, allocations and constraints. This action cannot be undone.',
       primaryText: 'Delete',
       primaryButtonClass: 'btn-warn',
       primaryAction: () => {
-        this.deleteData();
+        this.studentsService.deleteStudents();
+        this.projectsService.deleteProjects();
+        this.allocationsService.deleteAllocations();
+        this.skillsService.deleteSkills();
+        this.constraintsService.deleteConstraints();
+        this.courseIterationsService.setCourseIteration();
         this.overlayService.closeOverlay();
       },
       secondaryText: 'Keep Data',
-    };
-
-    this.overlayService.displayComponent(ConfirmationOverlayComponent, overlayData);
+    });
   };
 
-  private deleteData() {
-    this.studentsService.deleteStudents();
-    this.projectsService.deleteProjects();
-    this.allocationsService.deleteAllocations();
-    this.skillsService.deleteSkills();
-
-    this.constraintsService.deleteConstraints();
-    this.courseIterationsService.setCourseIteration();
-
-    this.overlayService.closeOverlay();
-  }
-
-  private deleteDynamicData() {
-    this.lockedStudentsService.deleteLocks();
-    this.allocationsService.deleteAllocations();
-  }
-
   private updateFulfillsAllConstraints(): void {
-    this.fulfillsAllConstraints = this.allocationData.projectsData.every(project => project.fulfillsAllConstraints);
+    this.fulfillsAllConstraints = this.allocationData.projectsData.every(p => p.fulfillsAllConstraints);
   }
 }
