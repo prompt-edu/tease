@@ -53,6 +53,11 @@
   background: rgba(122, 223, 151, 0.12);
 }
 
+.save-status[data-state='failed'] {
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.14);
+}
+
 .save-status-dot {
   display: inline-block;
   width: 0.55rem;

@@ -44,7 +44,7 @@ export class ImportOverlayComponent implements OverlayComponentData {
 
     const data = await this.csvParserService.getData(files[0]);
     if (!data) {
-      this.toastsService.showToast('Invalid CSV file', 'Import ', false);
+      this.toastsService.showToast('Invalid CSV file', 'Import', false);
       return;
     }
 

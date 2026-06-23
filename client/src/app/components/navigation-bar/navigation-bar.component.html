@@ -78,6 +78,18 @@
               <span>Unsaved changes</span>
             </button>
           }
+          @case ('failed') {
+            <button
+              type="button"
+              class="save-status save-status--clickable"
+              data-state="failed"
+              (click)="flushWorkspaceNow()"
+              ngbTooltip="Autosave failed. Click to retry."
+              triggers="hover">
+              <span class="save-status-dot"></span>
+              <span>Save failed</span>
+            </button>
+          }
           @case ('saved') {
             <div
               class="save-status"

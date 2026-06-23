@@ -11,6 +11,8 @@ import { AllocationsService } from '../data/allocations.service';
 import { TeaseSaveRequest, TeaseWorkspace, TeaseWorkspaceUpsert } from 'src/app/api/models/tease-workspace';
 
 const AUTOSAVE_DEBOUNCE_MS = 2000;
+const AUTOSAVE_RETRY_BASE_DELAY_MS = 2000;
+const MAX_AUTOSAVE_RETRIES = 3;
 
 /**
  * Owns the connection to a single PROMPT course phase workspace:
@@ -24,11 +26,14 @@ export class WorkspaceStateService implements OnDestroy {
   private readonly coursePhaseIdSubject$ = new BehaviorSubject<string | null>(null);
   private readonly dirtySubject$ = new BehaviorSubject<boolean>(false);
   private readonly savingSubject$ = new BehaviorSubject<boolean>(false);
+  private readonly saveFailedSubject$ = new BehaviorSubject<boolean>(false);
   private readonly lastSavedAtSubject$ = new BehaviorSubject<string | null>(null);
   private readonly lastExportedAtSubject$ = new BehaviorSubject<string | null>(null);
 
   private autosaveSub: Subscription | null = null;
   private autosaveTrigger$ = new Subject<void>();
+  private autosaveRetryTimer: ReturnType<typeof setTimeout> | null = null;
+  private autosaveFailureCount = 0;
 
   /** Bumped on every edit; used to detect edits that arrive while a PUT is in flight. */
   private editCounter = 0;
@@ -66,6 +71,9 @@ export class WorkspaceStateService implements OnDestroy {
   get saving$(): Observable<boolean> {
     return this.savingSubject$.asObservable();
   }
+  get saveFailed$(): Observable<boolean> {
+    return this.saveFailedSubject$.asObservable();
+  }
   get lastSavedAt$(): Observable<string | null> {
     return this.lastSavedAtSubject$.asObservable();
   }
@@ -82,6 +90,7 @@ export class WorkspaceStateService implements OnDestroy {
     // workspace cannot fire against the new one.
     this.stopAutosaveWatcher();
     this.autosaveTrigger$ = new Subject<void>();
+    this.resetAutosaveFailure();
 
     this.coursePhaseIdSubject$.next(coursePhaseId);
 
@@ -111,6 +120,7 @@ export class WorkspaceStateService implements OnDestroy {
   /** Drop all workspace state and disconnect. Use on logout / leave-workspace. */
   reset(): void {
     this.stopAutosaveWatcher();
+    this.resetAutosaveFailure();
     this.coursePhaseIdSubject$.next(null);
     this.editCounter = 0;
     this.dirtySubject$.next(false);
@@ -126,6 +136,7 @@ export class WorkspaceStateService implements OnDestroy {
     if (!this.coursePhaseId || !this.dirtySubject$.getValue() || this.savingSubject$.getValue()) {
       return false;
     }
+    this.clearAutosaveRetry();
     return this.runPutWorkspace();
   }
 
@@ -195,6 +206,7 @@ export class WorkspaceStateService implements OnDestroy {
   private stopAutosaveWatcher(): void {
     this.autosaveSub?.unsubscribe();
     this.autosaveSub = null;
+    this.clearAutosaveRetry();
   }
 
   private buildUpsertPayload(): TeaseWorkspaceUpsert {
@@ -209,7 +221,7 @@ export class WorkspaceStateService implements OnDestroy {
 
   private async runPutWorkspace(): Promise<boolean> {
     const phaseId = this.coursePhaseId;
-    if (!phaseId) return false;
+    if (!phaseId || this.savingSubject$.getValue()) return false;
 
     const editsAtStart = this.editCounter;
     this.savingSubject$.next(true);
@@ -218,16 +230,52 @@ export class WorkspaceStateService implements OnDestroy {
       if (this.coursePhaseId !== phaseId) return true;
 
       this.lastSavedAtSubject$.next(saved?.lastSavedAt ?? new Date().toISOString());
+      this.resetAutosaveFailure();
       // Only clear dirty if no edits arrived while the PUT was in flight —
       // otherwise the unsent edits would lose their unsaved-changes signal.
       if (this.editCounter === editsAtStart) this.dirtySubject$.next(false);
       return true;
     } catch (error) {
       console.warn('Autosave failed', error);
+      // A stale request must not mark the workspace selected in the meantime
+      // as failed or schedule a retry for the old phase.
+      if (this.coursePhaseId === phaseId) {
+        this.saveFailedSubject$.next(true);
+        this.autosaveFailureCount++;
+        this.scheduleAutosaveRetry(phaseId);
+      }
       return false;
     } finally {
       this.savingSubject$.next(false);
+      // An edit can land while this request is in flight. Its debounce is
+      // skipped while saving, so queue a new save once this request completes.
+      if (this.coursePhaseId === phaseId && this.dirtySubject$.getValue() && !this.autosaveRetryTimer) {
+        this.autosaveTrigger$.next();
+      }
     }
+  }
+
+  private scheduleAutosaveRetry(phaseId: string): void {
+    if (this.autosaveFailureCount > MAX_AUTOSAVE_RETRIES || this.autosaveRetryTimer) return;
+
+    const delay = AUTOSAVE_RETRY_BASE_DELAY_MS * 2 ** (this.autosaveFailureCount - 1);
+    this.autosaveRetryTimer = setTimeout(() => {
+      this.autosaveRetryTimer = null;
+      if (this.coursePhaseId === phaseId && this.dirtySubject$.getValue() && !this.savingSubject$.getValue()) {
+        void this.runPutWorkspace();
+      }
+    }, delay);
+  }
+
+  private clearAutosaveRetry(): void {
+    if (this.autosaveRetryTimer) clearTimeout(this.autosaveRetryTimer);
+    this.autosaveRetryTimer = null;
+  }
+
+  private resetAutosaveFailure(): void {
+    this.clearAutosaveRetry();
+    this.autosaveFailureCount = 0;
+    this.saveFailedSubject$.next(false);
   }
 
   private errorMessage(error: unknown): string {

@@ -21,7 +21,7 @@ import { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { WorkspaceStateService } from 'src/app/shared/services/workspace-state.service';
 import { Observable, combineLatest, map } from 'rxjs';
 
-type SaveStatus = 'saving' | 'unsaved' | 'saved';
+type SaveStatus = 'saving' | 'unsaved' | 'saved' | 'failed';
 
 @Component({
   selector: 'app-navigation-bar',
@@ -70,8 +70,11 @@ export class NavigationBarComponent implements OnInit, OnChanges {
     this.workspaceActive$ = this.workspaceStateService.coursePhaseId$.pipe(map(id => !!id));
     this.saveStatus$ = combineLatest([
       this.workspaceStateService.saving$,
+      this.workspaceStateService.saveFailed$,
       this.workspaceStateService.dirty$,
-    ]).pipe(map(([saving, dirty]) => (saving ? 'saving' : dirty ? 'unsaved' : 'saved')));
+    ]).pipe(
+      map(([saving, saveFailed, dirty]) => (saving ? 'saving' : saveFailed ? 'failed' : dirty ? 'unsaved' : 'saved'))
+    );
 
     this.saveTooltip$ = this.workspaceStateService.lastExportedAt$.pipe(
       map(t => (t ? `Last saved to PROMPT: ${this.formatTimestamp(t)}` : 'Click to save allocations to PROMPT'))
