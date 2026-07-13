@@ -22,11 +22,11 @@ jobs:
       matrix:
         include:
           - image-name: prompt-edu/tease-client
-            docker-file: ./client/Dockerfile
-            docker-context: ./client
+            docker-file: ./client-react/Dockerfile
+            docker-context: ./client-react
           - image-name: prompt-edu/tease-server
-            docker-file: ./server/Dockerfile
-            docker-context: ./server
+            docker-file: ./server-go/Dockerfile
+            docker-context: ./server-go
     uses: ls1intum/.github/.github/workflows/build-and-push-docker-image.yml@v1.2.0
     secrets: inherit
     with:

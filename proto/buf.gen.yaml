@@ -1,0 +1,17 @@
+version: v1
+plugins:
+  # Go generated code
+  - plugin: buf.build/protocolbuffers/go
+    out: server-go/pkg/gen
+    opt: paths=source_relative
+  # Connect-Go generated code
+  - plugin: buf.build/connectrpc/go
+    out: server-go/pkg/gen
+    opt: paths=source_relative
+  # TypeScript/React generated code using connect-es
+  - plugin: buf.build/bufbuild/es
+    out: client-react/src/gen
+    opt: target=ts
+  - plugin: buf.build/connectrpc/es
+    out: client-react/src/gen
+    opt: target=ts

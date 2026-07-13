@@ -19,7 +19,7 @@ services:
     container_name: tease-server
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.tease-server.rule=Host(`${CORE_HOST}`) && PathPrefix(`/ws`)"
+      - "traefik.http.routers.tease-server.rule=Host(`${CORE_HOST}`) && PathPrefix(`/tease.v1.TeamAllocationService`)"
       - "traefik.http.services.tease-server.loadbalancer.server.port=8081"
       - "traefik.http.routers.tease-server.entrypoints=websecure"
       - "traefik.http.routers.tease-server.tls.certresolver=letsencrypt"

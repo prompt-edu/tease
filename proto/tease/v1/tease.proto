@@ -1,0 +1,173 @@
+syntax = "proto3";
+
+package tease.v1;
+
+option go_package = "github.com/ls1intum/tease/server-go/pkg/gen/tease/v1;teasev1";
+
+// ─── Data Models ─────────────────────────────────────────────────────────────
+
+message Language {
+  string language   = 1;
+  string proficiency = 2; // e.g. "A1/A2", "B1/B2", "C1/C2", "Native"
+}
+
+message StudentSkill {
+  string id          = 1;
+  string proficiency = 2; // e.g. "Novice", "Intermediate", "Advanced", "Expert"
+}
+
+message ProjectPreference {
+  string project_id = 1;
+  int32  priority   = 2; // 0 = highest
+}
+
+message Comment {
+  string author      = 1;
+  string date        = 2;
+  string description = 3;
+  string text        = 4;
+}
+
+message Skill {
+  string id          = 1;
+  string title       = 2;
+  string description = 3;
+}
+
+message Student {
+  string id                      = 1;
+  string first_name              = 2;
+  string last_name               = 3;
+  string email                   = 4;
+  string gender                  = 5;  // e.g. "Female", "Male", "Other"
+  string nationality             = 6;
+  string study_program           = 7;
+  string study_degree            = 8;
+  int32  semester                = 9;
+  repeated string devices        = 10; // e.g. "IPhone", "IPad", "Mac"
+  repeated Language languages    = 11;
+  string intro_self_assessment   = 12; // SkillProficiency
+  string intro_course_proficiency = 13; // SkillProficiency
+  repeated StudentSkill skills            = 14;
+  repeated ProjectPreference project_preferences = 15;
+  repeated Comment student_comments       = 16;
+  repeated Comment tutor_comments         = 17;
+}
+
+message Project {
+  string id       = 1;
+  string name     = 2;
+  int32  min_size = 3;
+  int32  max_size = 4;
+}
+
+message Allocation {
+  string student_id = 1;
+  string project_id = 2;
+  int64  version    = 3;
+}
+
+// ─── Initial State ────────────────────────────────────────────────────────────
+
+message GetStateRequest {
+  string course_iteration_id = 1;
+}
+
+message GetStateResponse {
+  repeated Student    students           = 1;
+  repeated Project    projects           = 2;
+  repeated Allocation allocations        = 3;
+  repeated string     locked_student_ids = 4;
+  bytes               constraints_json   = 5; // JSON-encoded constraint wrappers
+  int64               version            = 6;
+}
+
+// ─── Bidirectional Stream ─────────────────────────────────────────────────────
+
+message ClientUpdate {
+  string course_iteration_id = 1;
+
+  oneof update {
+    MoveStudentRequest      move_student       = 2;
+    LockStudentRequest      lock_student       = 3;
+    UnlockStudentRequest    unlock_student     = 4;
+    UpdateConstraintsRequest update_constraints = 5;
+  }
+}
+
+message MoveStudentRequest {
+  string student_id       = 1;
+  string from_project_id  = 2; // empty when unallocated
+  string to_project_id    = 3;
+  int64  expected_version = 4;
+}
+
+message LockStudentRequest {
+  string student_id = 1;
+}
+
+message UnlockStudentRequest {
+  string student_id = 1;
+}
+
+message UpdateConstraintsRequest {
+  bytes constraints_json = 1; // JSON-encoded constraint wrappers (server stores opaquely)
+}
+
+message ServerUpdate {
+  oneof update {
+    AllocationUpdated  allocation_updated  = 1;
+    StudentLocked      student_locked      = 2;
+    StudentUnlocked    student_unlocked    = 3;
+    ConstraintsUpdated constraints_updated = 4;
+    ErrorUpdate        error               = 5;
+  }
+}
+
+message AllocationUpdated {
+  string student_id   = 1;
+  string project_id   = 2;
+  int64  new_version  = 3;
+}
+
+message StudentLocked {
+  string student_id = 1;
+}
+
+message StudentUnlocked {
+  string student_id = 1;
+}
+
+message ConstraintsUpdated {
+  bytes constraints_json = 1;
+}
+
+message ErrorUpdate {
+  string message = 1;
+  string code    = 2; // e.g. "VERSION_CONFLICT"
+}
+
+// ─── Solver (client-side LP; stub on server) ─────────────────────────────────
+
+message SolveRequest {
+  string course_iteration_id = 1;
+  string strategy_id         = 2;
+}
+
+message SolveResponse {
+  string              status          = 1; // "optimal" | "feasible" | "infeasible"
+  repeated Allocation new_allocations = 2;
+}
+
+// ─── Service ──────────────────────────────────────────────────────────────────
+
+service TeamAllocationService {
+  // Fetch initial room state
+  rpc GetInitialState(GetStateRequest) returns (GetStateResponse);
+
+  // Real-time collaboration (bidirectional stream)
+  rpc StreamUpdates(stream ClientUpdate) returns (stream ServerUpdate);
+
+  // Solver stub – LP runs client-side; returns NOT_IMPLEMENTED
+  rpc SolveAllocation(SolveRequest) returns (SolveResponse);
+}
