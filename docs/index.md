@@ -309,7 +309,7 @@ When using PROMPT import, collaborative editing works automatically:
 
 - **In-Memory Storage**: The server stores collaboration data in memory (not a database), so data is lost on server restart
 - **Same Course Iteration Required**: All clients must use the same course iteration ID to see each other's changes
-- **No Authentication Required for Local Testing**: The WebSocket server allows `http://localhost` connections without JWT authentication
+- **No Authentication Required for Local Testing**: With the `local` Spring profile (set in `docker-compose.yml`), the WebSocket server accepts connections without JWT authentication
 - **Console Logging**: Open the browser console to see "Received allocations", "Received constraints", and "Received lockedStudents" messages when updates are received
 
 #### Troubleshooting
@@ -413,7 +413,8 @@ This documentation declares all data objects in TEASE.
 
 In the server directory, run `mvn install` to install all necessary dependencies.
 
-To start the server, run `mvn spring-boot:run`. After successful startup, the server is available at `http://localhost:8081/`.
+To start the server locally, run `mvn spring-boot:run -Dspring-boot.run.profiles=local`. After successful startup, the server is available at `http://localhost:8081/`.
+Without the `local` profile, the server rejects the WebSocket handshake unless the `token` query parameter carries a valid Keycloak-signed JWT, verified against the JWKS at `KEYCLOAK_JWT_URI`.
 The websocket server uses the STOMP messaging protocol to handle real-time communication and message exchange between clients and the server.
 
 In general, there are four main STOMP paths:
@@ -454,7 +455,7 @@ Then configure the following environment variables in a `.tease-env.prod` file w
 
 - **TEASE_IMAGE_TAG**: The Docker image tag of the TEASE image. By default, this is set to `latest`
 - **SERVER_HOST**: The hostname of the server
-- **KEYCLOAK_JWK_SET_URI**: The URI that provides the JSON Web Key Set (JWKs), which includes public keys used for token verification
+- **KEYCLOAK_JWT_URI**: The URI that provides the JSON Web Key Set (JWKs), which includes public keys the TEASE server uses to verify the token on WebSocket connections
 
 Use the following command to deploy TEASE on the production server:
 
