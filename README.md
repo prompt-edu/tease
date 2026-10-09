@@ -87,9 +87,11 @@ The client will be available at http://localhost:80/
 ```bash
 cd server
 mvn clean install
-mvn spring-boot:run
+mvn spring-boot:run -Dspring-boot.run.profiles=local
 ```
 The server will be available at http://localhost:8081/
+
+The `local` profile accepts WebSocket connections without a token. Without it, the server requires a Keycloak-signed JWT in the `token` query parameter and reads the JWKS URI from `KEYCLOAK_JWT_URI`.
 
 ---
 
